@@ -1,0 +1,136 @@
+import { useState, useRef, useEffect } from 'react';
+import useAuthStore from '../store/authStore';
+import toast from 'react-hot-toast';
+
+export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const [error, setError] = useState('');
+  const verifyAndEnterAdmin = useAuthStore((s) => s.verifyAndEnterAdmin);
+  const inputRef = useRef(null);
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+      setPassword('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const success = verifyAndEnterAdmin(password);
+    if (success) {
+      toast.success('أهلاً بك يا مدير! 👑');
+      onClose();
+      onSuccess();
+    } else {
+      setError('كلمة المرور غلط. حاول تاني.');
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+      setPassword('');
+      inputRef.current?.focus();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-space-md bg-surface-container-lowest/80 backdrop-blur-md"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className={`relative w-full max-w-sm bg-surface-container rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] overflow-hidden ${shaking ? 'animate-shake' : ''}`}
+      >
+        {/* Top accent bar */}
+        <div className="h-1 w-full bg-primary-container"></div>
+
+        {/* Header */}
+        <div className="px-space-xl pt-space-xl pb-space-md flex items-center gap-space-md">
+          <div className="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center shrink-0">
+            <span
+              className="material-symbols-outlined text-primary text-[28px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              admin_panel_settings
+            </span>
+          </div>
+          <div>
+            <h2 className="font-headline-md text-headline-md text-on-surface">
+              دخول لوحة الأدمن
+            </h2>
+            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              أدخل كلمة مرور المدير للمتابعة
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-space-md left-space-md w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-space-xl pb-space-xl flex flex-col gap-space-md">
+          {/* Password field */}
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="كلمة المرور"
+              className={`w-full h-14 bg-surface-container-low rounded-xl px-space-md pl-12 font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant border transition-all outline-none ${
+                error
+                  ? 'border-error focus:border-error'
+                  : 'border-outline-variant focus:border-primary'
+              }`}
+              dir="ltr"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+            >
+              <span className="material-symbols-outlined text-[22px]">
+                {showPassword ? 'visibility_off' : 'visibility'}
+              </span>
+            </button>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="flex items-center gap-space-xs text-error font-label-md text-label-md">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-space-sm mt-space-xs">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 h-12 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant font-headline-sm text-headline-sm rounded-xl transition-all"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={!password}
+              className="flex-1 h-12 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-headline-sm rounded-xl transition-all transform active:scale-95 shadow-lg shadow-primary-container/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-space-xs"
+            >
+              <span className="material-symbols-outlined text-[20px]">login</span>
+              <span>دخول</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

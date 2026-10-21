@@ -1,0 +1,243 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS - PlayStation Café Theme
+   ═══════════════════════════════════════════════ */
+@theme {
+  /* ── Primary ── */
+  --color-primary: #b5c4ff;
+  --color-primary-fixed: #dbe1ff;
+  --color-primary-fixed-dim: #b5c4ff;
+  --color-primary-container: #2e6bff;
+  --color-on-primary: #00297a;
+  --color-on-primary-fixed: #00174d;
+  --color-on-primary-fixed-variant: #003dab;
+  --color-on-primary-container: #ffffff;
+  --color-inverse-primary: #0051df;
+
+  /* ── Secondary ── */
+  --color-secondary: #4edea3;
+  --color-secondary-fixed: #6ffbbe;
+  --color-secondary-fixed-dim: #4edea3;
+  --color-secondary-container: #00a572;
+  --color-on-secondary: #003824;
+  --color-on-secondary-fixed: #002113;
+  --color-on-secondary-fixed-variant: #005236;
+  --color-on-secondary-container: #00311f;
+
+  /* ── Tertiary ── */
+  --color-tertiary: #ffb3ad;
+  --color-tertiary-fixed: #ffdad7;
+  --color-tertiary-fixed-dim: #ffb3ad;
+  --color-tertiary-container: #dd3739;
+  --color-on-tertiary: #68000a;
+  --color-on-tertiary-fixed: #410004;
+  --color-on-tertiary-fixed-variant: #930013;
+  --color-on-tertiary-container: #150001;
+
+  /* ── Error ── */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+
+  /* ── Surface ── */
+  --color-surface: #0f131d;
+  --color-surface-dim: #0f131d;
+  --color-surface-bright: #353944;
+  --color-surface-tint: #b5c4ff;
+  --color-surface-variant: #313540;
+  --color-surface-container-lowest: #0a0e18;
+  --color-surface-container-low: #171b26;
+  --color-surface-container: #1c1f2a;
+  --color-surface-container-high: #262a35;
+  --color-surface-container-highest: #313540;
+  --color-on-surface: #dfe2f1;
+  --color-on-surface-variant: #c3c5d8;
+  --color-inverse-surface: #dfe2f1;
+  --color-inverse-on-surface: #2c303b;
+
+  /* ── Background ── */
+  --color-background: #0f131d;
+  --color-on-background: #dfe2f1;
+
+  /* ── Outline ── */
+  --color-outline: #8d90a1;
+  --color-outline-variant: #434655;
+
+  /* ══════════════════════════════════════════
+     SPACING TOKENS
+     ══════════════════════════════════════════ */
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2rem;
+  --spacing-margin: 1.5rem;
+  --spacing-margin-mobile: 1rem;
+  --spacing-gutter: 1rem;
+  --spacing-gutter-mobile: 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Rubik", sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+/* ═══════════════════════════════════════════════
+   TYPOGRAPHY UTILITIES
+   All font families are Rubik.
+   Each class sets: font-family + font-size + line-height + font-weight
+   ═══════════════════════════════════════════════ */
+@layer utilities {
+  /* ── Font family classes (all Rubik) ── */
+  .font-display-lg,
+  .font-display-lg-mobile,
+  .font-headline-xl,
+  .font-headline-xl-mobile,
+  .font-headline-lg,
+  .font-headline-md,
+  .font-headline-sm,
+  .font-body-lg,
+  .font-body-md,
+  .font-body-sm,
+  .font-label-lg,
+  .font-label-md,
+  .font-label-sm,
+  .font-label-timer,
+  .font-label-timer-sm,
+  .font-label-price {
+    font-family: "Rubik", sans-serif;
+  }
+
+  /* ── Size + weight + line-height classes ── */
+  .text-display-lg {
+    font-size: 48px;
+    line-height: 56px;
+    font-weight: 800;
+  }
+  .text-display-lg-mobile {
+    font-size: 36px;
+    line-height: 44px;
+    font-weight: 800;
+  }
+  .text-headline-xl {
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 700;
+  }
+  .text-headline-xl-mobile {
+    font-size: 26px;
+    line-height: 34px;
+    font-weight: 700;
+  }
+  .text-headline-lg {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 700;
+  }
+  .text-headline-md {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+  }
+  .text-headline-sm {
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 600;
+  }
+  .text-body-lg {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+  }
+  .text-body-md {
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 400;
+  }
+  .text-body-sm {
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 400;
+  }
+  .text-label-lg {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .text-label-md {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+  .text-label-sm {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+  }
+  .text-label-price {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 700;
+  }
+  .text-label-timer {
+    font-size: 36px;
+    line-height: 40px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+  .text-label-timer-sm {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 700;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+@layer utilities {
+  .animate-shake {
+    animation: shake 0.45s ease-in-out;
+  }
+}
