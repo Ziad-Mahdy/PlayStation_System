@@ -6,12 +6,6 @@ const DEFAULT_PRODUCTS = [
   { id: 2, name: 'قهوة تركي مظبوط', price: 20, category: 'مشروبات' },
   { id: 3, name: 'شاي تلقيمة', price: 10, category: 'مشروبات' },
   { id: 4, name: 'مياه معدنية صغيرة', price: 7.5, category: 'مشروبات' },
-  { id: 5, name: 'إندومي مخصوص', price: 25, category: 'أكل' },
-  { id: 6, name: 'كانز ريد بول', price: 25, category: 'مشروبات' },
-  { id: 7, name: 'شيبسي', price: 10, category: 'سناكس' },
-  { id: 8, name: 'نسكافيه', price: 15, category: 'مشروبات' },
-  { id: 9, name: 'لاتيه', price: 25, category: 'مشروبات' },
-  { id: 10, name: 'براوني', price: 20, category: 'حلويات' },
 ];
 
 const useAdminStore = create(
@@ -58,7 +52,7 @@ const useAdminStore = create(
         }));
       },
     }),
-    { name: 'ps-admin-store' }
+    { name: 'ps-admin-store-v2' }
   )
 );
 
