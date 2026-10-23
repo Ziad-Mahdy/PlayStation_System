@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 export const supabaseService = {
   // ── Devices ──
   async fetchDevices() {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) return [];
     try {
       const { data, error } = await supabase
         .from('devices')
@@ -12,7 +12,7 @@ export const supabaseService = {
 
       if (error) {
         console.error('Error fetching devices from Supabase:', error);
-        return null;
+        return [];
       }
       return data.map((d) => ({
         id: d.id,
@@ -26,12 +26,12 @@ export const supabaseService = {
       }));
     } catch (err) {
       console.error('Supabase fetchDevices exception:', err);
-      return null;
+      return [];
     }
   },
 
   async upsertDevice(device) {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) return null;
     try {
       const payload = {
         name: device.name,
@@ -42,12 +42,20 @@ export const supabaseService = {
         status: device.status,
         session: device.session,
       };
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('devices')
-        .upsert(payload, { onConflict: 'name' });
-      if (error) console.error('Error upserting device:', error);
+        .upsert(payload, { onConflict: 'name' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error upserting device:', error);
+        return null;
+      }
+      return data;
     } catch (err) {
       console.error('Supabase upsertDevice exception:', err);
+      return null;
     }
   },
 
@@ -63,7 +71,7 @@ export const supabaseService = {
 
   // ── Categories ──
   async fetchCategories() {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) return [];
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -72,12 +80,12 @@ export const supabaseService = {
 
       if (error) {
         console.error('Error fetching categories:', error);
-        return null;
+        return [];
       }
       return data.map((c) => c.name);
     } catch (err) {
       console.error('Supabase fetchCategories exception:', err);
-      return null;
+      return [];
     }
   },
 
@@ -103,7 +111,7 @@ export const supabaseService = {
 
   // ── Products (Buffet) ──
   async fetchProducts() {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) return [];
     try {
       const { data, error } = await supabase
         .from('products')
@@ -112,7 +120,7 @@ export const supabaseService = {
 
       if (error) {
         console.error('Error fetching products:', error);
-        return null;
+        return [];
       }
       return data.map((p) => ({
         id: p.id,
@@ -122,7 +130,7 @@ export const supabaseService = {
       }));
     } catch (err) {
       console.error('Supabase fetchProducts exception:', err);
-      return null;
+      return [];
     }
   },
 
@@ -138,6 +146,7 @@ export const supabaseService = {
         })
         .select()
         .single();
+
       if (error) {
         console.error('Error adding product:', error);
         return null;
@@ -164,16 +173,10 @@ export const supabaseService = {
     }
   },
 
-  async deleteProduct(id, name) {
+  async deleteProduct(id) {
     if (!isSupabaseConfigured) return;
     try {
-      let query = supabase.from('products').delete();
-      if (id) {
-        query = query.eq('id', id);
-      } else if (name) {
-        query = query.eq('name', name);
-      }
-      const { error } = await query;
+      const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) console.error('Error deleting product:', error);
     } catch (err) {
       console.error('Supabase deleteProduct exception:', err);
@@ -182,7 +185,7 @@ export const supabaseService = {
 
   // ── Completed Sessions / Invoices ──
   async fetchCompletedSessions() {
-    if (!isSupabaseConfigured) return null;
+    if (!isSupabaseConfigured) return [];
     try {
       const { data, error } = await supabase
         .from('completed_sessions')
@@ -191,7 +194,7 @@ export const supabaseService = {
 
       if (error) {
         console.error('Error fetching completed sessions:', error);
-        return null;
+        return [];
       }
       return data.map((s) => ({
         id: s.id,
@@ -211,31 +214,41 @@ export const supabaseService = {
       }));
     } catch (err) {
       console.error('Supabase fetchCompletedSessions exception:', err);
-      return null;
+      return [];
     }
   },
 
   async addCompletedSession(session) {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) return null;
     try {
-      const { error } = await supabase.from('completed_sessions').insert({
-        device_name: session.deviceName,
-        device_type: session.deviceType,
-        is_vip: session.isVIP,
-        customer_name: session.customerName || '',
-        start_time: session.startTime,
-        end_time: session.endTime,
-        duration_seconds: session.durationSeconds,
-        mode: session.mode,
-        time_type: session.timeType || 'open',
-        target_minutes: session.targetMinutes || null,
-        time_cost: session.timeCost,
-        orders_cost: session.ordersCost,
-        total: session.total,
-      });
-      if (error) console.error('Error adding completed session to Supabase:', error);
+      const { data, error } = await supabase
+        .from('completed_sessions')
+        .insert({
+          device_name: session.deviceName,
+          device_type: session.deviceType,
+          is_vip: session.isVIP,
+          customer_name: session.customerName || '',
+          start_time: session.startTime,
+          end_time: session.endTime,
+          duration_seconds: session.durationSeconds,
+          mode: session.mode,
+          time_type: session.timeType || 'open',
+          target_minutes: session.targetMinutes || null,
+          time_cost: session.timeCost,
+          orders_cost: session.ordersCost,
+          total: session.total,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding completed session to Supabase:', error);
+        return null;
+      }
+      return data;
     } catch (err) {
       console.error('Supabase addCompletedSession exception:', err);
+      return null;
     }
   },
 

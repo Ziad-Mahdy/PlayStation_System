@@ -8,6 +8,7 @@ import WorkerAccountsModal from '../components/devices/WorkerAccountsModal';
 export default function DevicesPage() {
   const devices = useDevicesStore((s) => s.devices);
   const categories = useDevicesStore((s) => s.categories || []);
+  const isLoading = useDevicesStore((s) => s.isLoading);
 
   // States
   const [filterType, setFilterType] = useState('all'); // 'all' | 'vip' | categoryName
@@ -198,7 +199,16 @@ export default function DevicesPage() {
       </div>
 
       {/* ── Devices Grid ── */}
-      {filteredDevices.length === 0 ? (
+      {isLoading ? (
+        <div className="bg-surface-container-low rounded-2xl p-space-xl flex flex-col items-center justify-center text-center py-24 border border-outline-variant/20">
+          <span className="material-symbols-outlined text-[48px] text-primary animate-spin mb-space-sm">
+            progress_activity
+          </span>
+          <p className="font-headline-sm text-headline-sm text-on-surface">
+            جاري مزامنة الأجهزة مع قاعدة البيانات...
+          </p>
+        </div>
+      ) : filteredDevices.length === 0 ? (
         <div className="bg-surface-container-low rounded-2xl p-space-xl flex flex-col items-center justify-center text-center py-20 border border-outline-variant/20">
           <span className="material-symbols-outlined text-[56px] text-outline mb-space-sm">
             search_off
