@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import AdminPasswordModal from './AdminPasswordModal';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 // ── Live Clock & Date Component ───────────────────
 function LiveClock() {
@@ -80,9 +81,23 @@ export default function Header() {
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
-                بلايستيشن كافيه
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
+                  بلايستيشن كافيه
+                </span>
+                {/* Cloud Sync Status Badge */}
+                <span
+                  title={isSupabaseConfigured ? 'متصل بقاعدة بيانات Supabase السحابية' : 'الوضع المحلي (Offline)'}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                    isSupabaseConfigured
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-zinc-700/40 text-zinc-400 border border-zinc-600/30'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                  {isSupabaseConfigured ? 'سحابي متصل' : 'محلي'}
+                </span>
+              </div>
               <span className="font-label-sm text-label-sm text-on-surface-variant">
                 نظام إدارة الصالة والحسابات
               </span>

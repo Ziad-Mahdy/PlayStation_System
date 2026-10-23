@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-// ─── Helper ──────────────────────────────────────
-const now = Date.now();
-const ago = (minutes) => now - minutes * 60 * 1000;
+import { supabaseService } from '../services/supabaseService';
 
 // ─── Initial Demo Data ────────────────────────────
 const INITIAL_DEVICES = [
@@ -39,10 +36,7 @@ const INITIAL_DEVICES = [
   },
 ];
 
-// Demo completed sessions for the admin panel report
 const INITIAL_COMPLETED = [];
-
-// Demo default categories
 const DEFAULT_CATEGORIES = ['PlayStation 5', 'PlayStation 4', 'بلياردو', 'بينج بونج', 'كمبيوتر PC'];
 
 // ─── Store ────────────────────────────────────────
@@ -54,6 +48,35 @@ const useDevicesStore = create(
       completedSessions: INITIAL_COMPLETED,
       nextSessionId: INITIAL_COMPLETED.length + 1,
       nextOrderId: 1000,
+      isSynced: false,
+
+      // ── Cloud sync initialization ──
+      initSync: async () => {
+        try {
+          const [dbDevices, dbCategories, dbSessions] = await Promise.all([
+            supabaseService.fetchDevices(),
+            supabaseService.fetchCategories(),
+            supabaseService.fetchCompletedSessions(),
+          ]);
+
+          const updates = {};
+          if (dbDevices && dbDevices.length > 0) {
+            updates.devices = dbDevices;
+          }
+          if (dbCategories && dbCategories.length > 0) {
+            updates.categories = dbCategories;
+          }
+          if (dbSessions && dbSessions.length > 0) {
+            updates.completedSessions = dbSessions;
+            const maxSessionId = dbSessions.reduce((max, s) => Math.max(max, s.id || 0), 0);
+            updates.nextSessionId = maxSessionId + 1;
+          }
+          updates.isSynced = true;
+          set(updates);
+        } catch (err) {
+          console.error('Failed to sync devices store with Supabase:', err);
+        }
+      },
 
       // ── Category management (admin only) ──
       addCategory: (catName) => {
@@ -61,6 +84,7 @@ const useDevicesStore = create(
         if (!trimmed) return false;
         if (get().categories.includes(trimmed)) return false;
         set((state) => ({ categories: [...state.categories, trimmed] }));
+        supabaseService.addCategory(trimmed);
         return true;
       },
 
@@ -68,37 +92,45 @@ const useDevicesStore = create(
         set((state) => ({
           categories: state.categories.filter((c) => c !== catName),
         }));
+        supabaseService.deleteCategory(catName);
       },
 
       // ── Start a new session on a free device ──
       startSession: (deviceId, mode, timeType = 'open', targetMinutes = 60, customerName = '') => {
+        let updatedDevice = null;
         set((state) => ({
-          devices: state.devices.map((d) =>
-            d.id === deviceId
-              ? {
-                  ...d,
-                  status: 'busy',
-                  session: {
-                    startTime: Date.now(),
-                    mode,
-                    timeType, // 'open' | 'fixed'
-                    targetMinutes: timeType === 'fixed' ? Math.max(1, Number(targetMinutes)) : null,
-                    customerName: (customerName || '').trim(),
-                    orders: [],
-                  },
-                }
-              : d
-          ),
+          devices: state.devices.map((d) => {
+            if (d.id === deviceId) {
+              updatedDevice = {
+                ...d,
+                status: 'busy',
+                session: {
+                  startTime: Date.now(),
+                  mode,
+                  timeType, // 'open' | 'fixed'
+                  targetMinutes: timeType === 'fixed' ? Math.max(1, Number(targetMinutes)) : null,
+                  customerName: (customerName || '').trim(),
+                  orders: [],
+                },
+              };
+              return updatedDevice;
+            }
+            return d;
+          }),
         }));
+        if (updatedDevice) {
+          supabaseService.upsertDevice(updatedDevice);
+        }
       },
 
       // ── Extend time for an active fixed session ──
       extendSessionTime: (deviceId, extraMinutes) => {
+        let updatedDevice = null;
         set((state) => ({
           devices: state.devices.map((d) => {
             if (d.id !== deviceId || !d.session) return d;
             const currentTarget = d.session.targetMinutes || 0;
-            return {
+            updatedDevice = {
               ...d,
               session: {
                 ...d.session,
@@ -106,8 +138,12 @@ const useDevicesStore = create(
                 targetMinutes: currentTarget + Number(extraMinutes),
               },
             };
+            return updatedDevice;
           }),
         }));
+        if (updatedDevice) {
+          supabaseService.upsertDevice(updatedDevice);
+        }
       },
 
       // ── End session: compute totals and archive ──
@@ -142,17 +178,21 @@ const useDevicesStore = create(
           total: parseFloat((timeCost + ordersCost).toFixed(2)),
         };
 
+        const freeDevice = { ...device, status: 'free', session: null };
+
         set((state) => ({
-          devices: state.devices.map((d) =>
-            d.id === deviceId ? { ...d, status: 'free', session: null } : d
-          ),
+          devices: state.devices.map((d) => (d.id === deviceId ? freeDevice : d)),
           completedSessions: [...state.completedSessions, completed],
           nextSessionId: state.nextSessionId + 1,
         }));
+
+        supabaseService.upsertDevice(freeDevice);
+        supabaseService.addCompletedSession(completed);
       },
 
       // ── Add a product to an active session ──
       addOrder: (deviceId, product) => {
+        let updatedDevice = null;
         set((state) => {
           const nextId = state.nextOrderId;
           return {
@@ -160,7 +200,7 @@ const useDevicesStore = create(
             devices: state.devices.map((d) => {
               if (d.id !== deviceId || !d.session) return d;
               const existing = d.session.orders.find((o) => o.name === product.name);
-              return {
+              updatedDevice = {
                 ...d,
                 session: {
                   ...d.session,
@@ -174,35 +214,52 @@ const useDevicesStore = create(
                       ],
                 },
               };
+              return updatedDevice;
             }),
           };
         });
+        if (updatedDevice) {
+          supabaseService.upsertDevice(updatedDevice);
+        }
       },
 
       // ── Remove an order item ──
       removeOrder: (deviceId, orderId) => {
+        let updatedDevice = null;
         set((state) => ({
           devices: state.devices.map((d) => {
             if (d.id !== deviceId || !d.session) return d;
-            return {
+            updatedDevice = {
               ...d,
               session: {
                 ...d.session,
                 orders: d.session.orders.filter((o) => o.id !== orderId),
               },
             };
+            return updatedDevice;
           }),
         }));
+        if (updatedDevice) {
+          supabaseService.upsertDevice(updatedDevice);
+        }
       },
 
       // ── Update single/multi price for a device (admin only) ──
       updateDevicePrice: (deviceId, priceType, value) => {
         const key = priceType === 'single' ? 'singlePrice' : 'multiPrice';
+        let updatedDevice = null;
         set((state) => ({
-          devices: state.devices.map((d) =>
-            d.id === deviceId ? { ...d, [key]: parseFloat(value) } : d
-          ),
+          devices: state.devices.map((d) => {
+            if (d.id === deviceId) {
+              updatedDevice = { ...d, [key]: parseFloat(value) };
+              return updatedDevice;
+            }
+            return d;
+          }),
         }));
+        if (updatedDevice) {
+          supabaseService.upsertDevice(updatedDevice);
+        }
       },
 
       // ── Add new device (admin only) ──
@@ -213,35 +270,43 @@ const useDevicesStore = create(
         );
         if (exists) return false;
 
-        set((state) => {
-          const maxId = state.devices.reduce((max, d) => Math.max(max, d.id), 0);
-          const newId = maxId + 1;
-          const newDevice = {
-            id: newId,
-            name: nameTrimmed || `جهاز ${newId}`,
-            type: deviceData.type || 'PS5',
-            isVIP: Boolean(deviceData.isVIP),
-            singlePrice: parseFloat(deviceData.singlePrice) || 45,
-            multiPrice: parseFloat(deviceData.multiPrice) || 35,
-            status: 'free',
-            session: null,
-          };
-          return {
-            devices: [...state.devices, newDevice],
-          };
-        });
+        const maxId = get().devices.reduce((max, d) => Math.max(max, d.id), 0);
+        const newId = maxId + 1;
+        const newDevice = {
+          id: newId,
+          name: nameTrimmed || `جهاز ${newId}`,
+          type: deviceData.type || 'PlayStation 5',
+          isVIP: Boolean(deviceData.isVIP),
+          singlePrice: parseFloat(deviceData.singlePrice) || 45,
+          multiPrice: parseFloat(deviceData.multiPrice) || 35,
+          status: 'free',
+          session: null,
+        };
+
+        set((state) => ({
+          devices: [...state.devices, newDevice],
+        }));
+
+        supabaseService.upsertDevice(newDevice);
         return true;
       },
 
       // ── Delete a device (admin only) ──
       deleteDevice: (deviceId) => {
+        const target = get().devices.find((d) => d.id === deviceId);
+        if (target) {
+          supabaseService.deleteDevice(target.name);
+        }
         set((state) => ({
           devices: state.devices.filter((d) => d.id !== deviceId),
         }));
       },
 
       // ── Clear today's completed sessions (admin action) ──
-      clearCompletedSessions: () => set({ completedSessions: [], nextSessionId: 1 }),
+      clearCompletedSessions: () => {
+        set({ completedSessions: [], nextSessionId: 1 });
+        supabaseService.clearCompletedSessions();
+      },
     }),
     { name: 'ps-devices-store-v2' }
   )
