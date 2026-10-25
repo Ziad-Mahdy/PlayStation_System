@@ -1,12 +1,16 @@
 import { create } from 'zustand';
+import useSubscriptionStore from './subscriptionStore';
 
-const ADMIN_PASSWORD = 'Admin@123';
+const DEFAULT_ADMIN_PASSWORD = 'Admin@123';
 
 const useAuthStore = create((set) => ({
   isAdmin: false,
 
   verifyAndEnterAdmin: (password) => {
-    if (password === ADMIN_PASSWORD) {
+    const client = useSubscriptionStore.getState().currentClient;
+    const requiredPassword = client?.admin_password || DEFAULT_ADMIN_PASSWORD;
+
+    if (password === requiredPassword) {
       set({ isAdmin: true });
       return true;
     }

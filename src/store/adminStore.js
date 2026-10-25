@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
+import useSubscriptionStore from './subscriptionStore';
 
-// Clean up any old localStorage data from previous versions
-try {
-  localStorage.removeItem('ps-admin-store-v2');
-  localStorage.removeItem('ps-admin-store');
-} catch (e) {}
+const getClientPhone = () => {
+  return useSubscriptionStore.getState().currentClient?.phone || 'default';
+};
 
 const useAdminStore = create((set, get) => ({
   products: [],
@@ -15,8 +14,9 @@ const useAdminStore = create((set, get) => ({
 
   // ── Load products directly from Supabase ──
   initSync: async () => {
+    const phone = getClientPhone();
     try {
-      const dbProducts = await supabaseService.fetchProducts();
+      const dbProducts = await supabaseService.fetchProducts(phone);
       const maxId = (dbProducts || []).reduce((max, p) => Math.max(max, p.id || 0), 0);
       set({
         products: dbProducts || [],
@@ -31,6 +31,7 @@ const useAdminStore = create((set, get) => ({
   },
 
   addProduct: async (product) => {
+    const phone = getClientPhone();
     const nameTrimmed = (product.name || '').trim();
     const exists = get().products.some(
       (p) => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
@@ -45,7 +46,7 @@ const useAdminStore = create((set, get) => ({
       nextProductId: tempId + 1,
     }));
 
-    const created = await supabaseService.addProduct(newProd);
+    const created = await supabaseService.addProduct(newProd, phone);
     if (created && created.id) {
       set((state) => ({
         products: state.products.map((p) =>

@@ -1,8 +1,62 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import useSubscriptionStore from '../store/subscriptionStore';
 import AdminPasswordModal from './AdminPasswordModal';
 import { isSupabaseConfigured } from '../lib/supabase';
+
+// ── Subscription Countdown Timer Component ─────────
+function SubscriptionCountdown({ expiresAt }) {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [statusColor, setStatusColor] = useState('text-emerald-400 bg-emerald-500/10 border-emerald-500/30');
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setTimeLeft('اشتراك غير مفعل');
+      return;
+    }
+
+    const calculate = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(expiresAt).getTime();
+      const diff = expiry - now;
+
+      if (diff <= 0) {
+        setTimeLeft('انتهى الاشتراك');
+        setStatusColor('text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 7) {
+        setStatusColor('text-emerald-400 bg-emerald-500/10 border-emerald-500/30');
+      } else if (days > 2) {
+        setStatusColor('text-amber-400 bg-amber-500/15 border-amber-500/30');
+      } else {
+        setStatusColor('text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse');
+      }
+
+      setTimeLeft(`متبقي ${days} ي و ${hours} س و ${minutes} د`);
+    };
+
+    calculate();
+    const interval = setInterval(calculate, 30000); // تحديث كل 30 ثانية
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return (
+    <div
+      title="مدة الاشتراك السحابي المتبقية"
+      className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-sm ${statusColor}`}
+    >
+      <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
+      <span>{timeLeft}</span>
+    </div>
+  );
+}
 
 // ── Live Clock & Date Component ───────────────────
 function LiveClock() {
@@ -47,6 +101,11 @@ export default function Header() {
 
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const exitAdmin = useAuthStore((s) => s.exitAdmin);
+
+  const currentClient = useSubscriptionStore((s) => s.currentClient);
+  const logoutClient = useSubscriptionStore((s) => s.logoutClient);
+  const isDevLoggedIn = useSubscriptionStore((s) => s.isDevLoggedIn);
+
   const navigate = useNavigate();
   const location = useLocation();
   const onAdminPage = location.pathname === '/admin';
@@ -67,6 +126,13 @@ export default function Header() {
     setShowPasswordModal(true);
   };
 
+  const handleLogout = () => {
+    if (window.confirm('هل تريد تسجيل الخروج من السيستم؟ يمكنك الدخول مجدداً بنفس الكود في أي وقت.')) {
+      logoutClient();
+      navigate('/login');
+    }
+  };
+
   return (
     <>
       <header className="fixed top-0 w-full z-50 bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)] border-b border-outline-variant/15">
@@ -83,7 +149,7 @@ export default function Header() {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
-                  بلايستيشن كافيه
+                  {currentClient ? currentClient.shop_name : 'بلايستيشن كافيه'}
                 </span>
                 {/* Cloud Sync Status Badge */}
                 <span
@@ -95,22 +161,44 @@ export default function Header() {
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
-                  {isSupabaseConfigured ? 'سحابي متصل' : 'محلي'}
+                  {isSupabaseConfigured ? 'سحابي' : 'محلي'}
                 </span>
               </div>
-              <span className="font-label-sm text-label-sm text-on-surface-variant">
-                نظام إدارة الصالة والحسابات
+              <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+                {currentClient ? (
+                  <>
+                    <span>العميل:</span>
+                    <strong className="text-on-surface">{currentClient.client_name}</strong>
+                  </>
+                ) : (
+                  'نظام إدارة الصالة والحسابات'
+                )}
               </span>
             </div>
           </div>
 
-          {/* ── Center: Clock & Date ── */}
-          <div className="hidden md:flex items-center">
+          {/* ── Center: Subscription Countdown & Live Clock ── */}
+          <div className="hidden md:flex items-center gap-3">
+            {currentClient && (
+              <SubscriptionCountdown expiresAt={currentClient.expires_at} />
+            )}
             <LiveClock />
           </div>
 
           {/* ── Navigation Actions ── */}
           <div className="flex items-center gap-space-sm">
+            {/* If Developer is logged in, show quick Dev Panel button */}
+            {isDevLoggedIn && (
+              <button
+                type="button"
+                onClick={() => navigate('/dev-panel')}
+                className="h-10 px-3 rounded-xl bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">terminal</span>
+                <span className="hidden sm:inline">لوحة المطور</span>
+              </button>
+            )}
+
             <nav className="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-2xl border border-outline-variant/20 shadow-sm">
               {/* Devices Tab */}
               <NavLink
@@ -127,7 +215,7 @@ export default function Header() {
                 الأجهزة
               </NavLink>
 
-              {/* Admin Panel Button - password-gated whenever returning to admin */}
+              {/* Admin Panel Button */}
               <button
                 type="button"
                 onClick={handleAdminClick}
@@ -145,6 +233,19 @@ export default function Header() {
                 </span>
               </button>
             </nav>
+
+            {/* Client Logout Button */}
+            {currentClient && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="تسجيل الخروج من الحساب"
+                className="h-11 px-3 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 flex items-center justify-center gap-1 text-xs font-semibold transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">logout</span>
+                <span className="hidden sm:inline">خروج</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
