@@ -61,6 +61,25 @@ CREATE POLICY "Allow public access on categories" ON public.categories FOR ALL U
 CREATE POLICY "Allow public access on products" ON public.products FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public access on completed_sessions" ON public.completed_sessions FOR ALL USING (true) WITH CHECK (true);
 
+-- تمكين المزامنة اللحظية المباشرة (Realtime)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.devices;
+    EXCEPTION WHEN duplicate_object THEN END;
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
+    EXCEPTION WHEN duplicate_object THEN END;
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+    EXCEPTION WHEN duplicate_object THEN END;
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.completed_sessions;
+    EXCEPTION WHEN duplicate_object THEN END;
+  END IF;
+END $$;
+
 -- إدخال البيانات الافتراضية (3 أجهزة + 4 مشروبات + الفئات الأساسية)
 INSERT INTO public.categories (name) VALUES 
 ('PlayStation 5'),
