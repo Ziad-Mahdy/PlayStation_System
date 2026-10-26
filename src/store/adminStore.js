@@ -16,7 +16,22 @@ const useAdminStore = create((set, get) => ({
   initSync: async () => {
     const phone = getClientPhone();
     try {
-      const dbProducts = await supabaseService.fetchProducts(phone);
+      let dbProducts = await supabaseService.fetchProducts(phone);
+      if (!dbProducts || dbProducts.length === 0) {
+        const defaultDrinks = [
+          { name: 'كانز بيبسي بارد', price: 15, category: 'مشروبات' },
+          { name: 'قهوة تركي مظبوط', price: 20, category: 'مشروبات' },
+          { name: 'شاي تلقيمة', price: 10, category: 'مشروبات' },
+          { name: 'مياه معدنية صغيرة', price: 7.5, category: 'مشروبات' },
+        ];
+        dbProducts = [];
+        for (let i = 0; i < defaultDrinks.length; i++) {
+          const item = { ...defaultDrinks[i], id: i + 1 };
+          dbProducts.push(item);
+          supabaseService.addProduct(item, phone);
+        }
+      }
+
       const maxId = (dbProducts || []).reduce((max, p) => Math.max(max, p.id || 0), 0);
       set({
         products: dbProducts || [],

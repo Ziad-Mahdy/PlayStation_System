@@ -27,16 +27,31 @@ const useDevicesStore = create((set, get) => ({
 
       const maxSessionId = (dbSessions || []).reduce((max, s) => Math.max(max, s.id || 0), 0);
 
+      // إذا لم يكن لدى العميل أي أجهزة بعد، ننشئ له الأجهزة الافتراضية الـ 3 فوراً
+      let finalDevices = dbDevices || [];
+      if (finalDevices.length === 0) {
+        const defaultDevices = [
+          { name: 'جهاز 1', type: 'PlayStation 5', isVIP: true, singlePrice: 50, multiPrice: 40, status: 'free', session: null },
+          { name: 'جهاز 2', type: 'PlayStation 5', isVIP: false, singlePrice: 45, multiPrice: 35, status: 'free', session: null },
+          { name: 'جهاز 3', type: 'PlayStation 4', isVIP: false, singlePrice: 35, multiPrice: 25, status: 'free', session: null },
+        ];
+        finalDevices = [];
+        for (let i = 0; i < defaultDevices.length; i++) {
+          const dev = { ...defaultDevices[i], id: i + 1 };
+          finalDevices.push(dev);
+          supabaseService.upsertDevice(dev, phone);
+        }
+      }
+
       // إذا كان المشترك جديد وليس لديه فئات بعد، نضع الفئات الأساسية
       let finalCategories = dbCategories || [];
       if (finalCategories.length === 0) {
         finalCategories = ['PlayStation 5', 'PlayStation 4', 'بلياردو', 'بينج بونج', 'كمبيوتر PC'];
-        // حفظ الفئات للمشترك في الداتابيز
         finalCategories.forEach((cat) => supabaseService.addCategory(cat, phone));
       }
 
       set({
-        devices: dbDevices || [],
+        devices: finalDevices,
         categories: finalCategories,
         completedSessions: dbSessions || [],
         nextSessionId: maxSessionId + 1,
