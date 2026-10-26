@@ -2,39 +2,13 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const supabaseService = {
   // ── Devices ──
-  async fetchDevices(clientPhone = 'default') {
+  async fetchDevices() {
     if (!isSupabaseConfigured) return [];
     try {
-      // 1. محاولة الجلب برقم هاتف العميل
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('devices')
         .select('*')
-        .eq('client_phone', clientPhone)
         .order('id', { ascending: true });
-
-      // 2. إذا كان عمود client_phone غير موجود في الجدول، نجلب الأجهزة مباشرة
-      if (error && error.code === '42703') {
-        const fallback = await supabase
-          .from('devices')
-          .select('*')
-          .order('id', { ascending: true });
-        data = fallback.data;
-        error = fallback.error;
-      } else if (!error && (!data || data.length === 0)) {
-        // إذا لم توجد أجهزة مخصصة لهذا الرقم، نجلب الأجهزة العامة أو الافتراضية
-        const fallback = await supabase
-          .from('devices')
-          .select('*')
-          .or(`client_phone.eq.default,client_phone.is.null`)
-          .order('id', { ascending: true });
-        if (fallback.data && fallback.data.length > 0) {
-          data = fallback.data;
-        } else {
-          // جلب كل الأجهزة كحل أخير لضمان عدم ضياع أي جهاز
-          const all = await supabase.from('devices').select('*').order('id', { ascending: true });
-          if (all.data && all.data.length > 0) data = all.data;
-        }
-      }
 
       if (error || !data) {
         console.error('Error fetching devices from Supabase:', error);
@@ -50,7 +24,6 @@ export const supabaseService = {
         multiPrice: parseFloat(d.multi_price) || 0,
         status: d.status || 'free',
         session: d.session || null,
-        clientPhone: d.client_phone || clientPhone,
       }));
     } catch (err) {
       console.error('Supabase fetchDevices exception:', err);
@@ -58,7 +31,7 @@ export const supabaseService = {
     }
   },
 
-  async upsertDevice(device, clientPhone = 'default') {
+  async upsertDevice(device) {
     if (!isSupabaseConfigured) return null;
     try {
       const payload = {
@@ -71,36 +44,39 @@ export const supabaseService = {
         session: device.session,
       };
 
-      // محاولة الحفظ بـ client_phone أولاً
-      let res = await supabase
+      // 1. إذا كان للجهاز id معروف في قاعدة البيانات، نحدثه مباشرة بالـ id لضمان 100% عدم حدوث تضارب
+      if (device.id && typeof device.id === 'number') {
+        const { data, error } = await supabase
+          .from('devices')
+          .update(payload)
+          .eq('id', device.id)
+          .select()
+          .single();
+
+        if (!error && data) return data;
+      }
+
+      // 2. إذا كان جهازاً جديداً أو بدون id، نحدث بناءً على الاسم الفريد
+      const { data, error } = await supabase
         .from('devices')
-        .upsert({ ...payload, client_phone: clientPhone }, { onConflict: 'client_phone,name' })
+        .upsert(payload, { onConflict: 'name' })
         .select()
         .single();
 
-      // لو عمود client_phone مش موجود أو القيد على name فقط
-      if (res.error) {
-        res = await supabase
-          .from('devices')
-          .upsert(payload, { onConflict: 'name' })
-          .select()
-          .single();
-      }
-
-      return res.data;
+      if (error) console.error('Error upserting device:', error);
+      return data;
     } catch (err) {
       console.error('Supabase upsertDevice exception:', err);
       return null;
     }
   },
 
-  async deleteDevice(deviceName, clientPhone = 'default') {
+  async deleteDevice(deviceName, deviceId) {
     if (!isSupabaseConfigured) return;
     try {
-      let query = supabase.from('devices').delete().eq('name', deviceName);
-      // تجربة الحذف بـ client_phone إن وجد
-      const res = await query.eq('client_phone', clientPhone);
-      if (res.error && res.error.code === '42703') {
+      if (deviceId) {
+        await supabase.from('devices').delete().eq('id', deviceId);
+      } else {
         await supabase.from('devices').delete().eq('name', deviceName);
       }
     } catch (err) {
@@ -109,34 +85,13 @@ export const supabaseService = {
   },
 
   // ── Categories ──
-  async fetchCategories(clientPhone = 'default') {
+  async fetchCategories() {
     if (!isSupabaseConfigured) return [];
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('categories')
         .select('name')
-        .eq('client_phone', clientPhone)
         .order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const fallback = await supabase
-          .from('categories')
-          .select('name')
-          .order('id', { ascending: true });
-        data = fallback.data;
-        error = fallback.error;
-      } else if (!error && (!data || data.length === 0)) {
-        const fallback = await supabase
-          .from('categories')
-          .select('name')
-          .or(`client_phone.eq.default,client_phone.is.null`)
-          .order('id', { ascending: true });
-        if (fallback.data && fallback.data.length > 0) data = fallback.data;
-        else {
-          const all = await supabase.from('categories').select('name').order('id', { ascending: true });
-          if (all.data && all.data.length > 0) data = all.data;
-        }
-      }
 
       if (error || !data) return [];
       return data.map((c) => c.name);
@@ -146,59 +101,32 @@ export const supabaseService = {
     }
   },
 
-  async addCategory(name, clientPhone = 'default') {
+  async addCategory(name) {
     if (!isSupabaseConfigured) return;
     try {
-      let res = await supabase.from('categories').insert({ name, client_phone: clientPhone });
-      if (res.error && res.error.code === '42703') {
-        await supabase.from('categories').insert({ name });
-      }
+      await supabase.from('categories').insert({ name });
     } catch (err) {
       console.error('Supabase addCategory exception:', err);
     }
   },
 
-  async deleteCategory(name, clientPhone = 'default') {
+  async deleteCategory(name) {
     if (!isSupabaseConfigured) return;
     try {
-      let res = await supabase.from('categories').delete().eq('name', name).eq('client_phone', clientPhone);
-      if (res.error && res.error.code === '42703') {
-        await supabase.from('categories').delete().eq('name', name);
-      }
+      await supabase.from('categories').delete().eq('name', name);
     } catch (err) {
       console.error('Supabase deleteCategory exception:', err);
     }
   },
 
   // ── Products (Buffet) ──
-  async fetchProducts(clientPhone = 'default') {
+  async fetchProducts() {
     if (!isSupabaseConfigured) return [];
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('client_phone', clientPhone)
         .order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const fallback = await supabase
-          .from('products')
-          .select('*')
-          .order('id', { ascending: true });
-        data = fallback.data;
-        error = fallback.error;
-      } else if (!error && (!data || data.length === 0)) {
-        const fallback = await supabase
-          .from('products')
-          .select('*')
-          .or(`client_phone.eq.default,client_phone.is.null`)
-          .order('id', { ascending: true });
-        if (fallback.data && fallback.data.length > 0) data = fallback.data;
-        else {
-          const all = await supabase.from('products').select('*').order('id', { ascending: true });
-          if (all.data && all.data.length > 0) data = all.data;
-        }
-      }
 
       if (error || !data) return [];
       return data.map((p) => ({
@@ -206,7 +134,6 @@ export const supabaseService = {
         name: p.name,
         price: parseFloat(p.price) || 0,
         category: p.category || 'مشروبات',
-        clientPhone: p.client_phone,
       }));
     } catch (err) {
       console.error('Supabase fetchProducts exception:', err);
@@ -214,13 +141,12 @@ export const supabaseService = {
     }
   },
 
-  async addProduct(product, clientPhone = 'default') {
+  async addProduct(product) {
     if (!isSupabaseConfigured) return null;
     try {
-      let res = await supabase
+      const { data, error } = await supabase
         .from('products')
         .insert({
-          client_phone: clientPhone,
           name: product.name,
           price: product.price,
           category: product.category,
@@ -228,19 +154,11 @@ export const supabaseService = {
         .select()
         .single();
 
-      if (res.error && res.error.code === '42703') {
-        res = await supabase
-          .from('products')
-          .insert({
-            name: product.name,
-            price: product.price,
-            category: product.category,
-          })
-          .select()
-          .single();
+      if (error) {
+        console.error('Error adding product:', error);
+        return null;
       }
-
-      return res.data;
+      return data;
     } catch (err) {
       console.error('Supabase addProduct exception:', err);
       return null;
@@ -273,34 +191,13 @@ export const supabaseService = {
   },
 
   // ── Completed Sessions / Invoices ──
-  async fetchCompletedSessions(clientPhone = 'default') {
+  async fetchCompletedSessions() {
     if (!isSupabaseConfigured) return [];
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('completed_sessions')
         .select('*')
-        .eq('client_phone', clientPhone)
         .order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const fallback = await supabase
-          .from('completed_sessions')
-          .select('*')
-          .order('id', { ascending: true });
-        data = fallback.data;
-        error = fallback.error;
-      } else if (!error && (!data || data.length === 0)) {
-        const fallback = await supabase
-          .from('completed_sessions')
-          .select('*')
-          .or(`client_phone.eq.default,client_phone.is.null`)
-          .order('id', { ascending: true });
-        if (fallback.data && fallback.data.length > 0) data = fallback.data;
-        else {
-          const all = await supabase.from('completed_sessions').select('*').order('id', { ascending: true });
-          if (all.data && all.data.length > 0) data = all.data;
-        }
-      }
 
       if (error || !data) return [];
       return data.map((s) => ({
@@ -318,7 +215,6 @@ export const supabaseService = {
         timeCost: parseFloat(s.time_cost) || 0,
         ordersCost: parseFloat(s.orders_cost) || 0,
         total: parseFloat(s.total) || 0,
-        clientPhone: s.client_phone,
       }));
     } catch (err) {
       console.error('Supabase fetchCompletedSessions exception:', err);
@@ -326,7 +222,7 @@ export const supabaseService = {
     }
   },
 
-  async addCompletedSession(session, clientPhone = 'default') {
+  async addCompletedSession(session) {
     if (!isSupabaseConfigured) return null;
     try {
       const payload = {
@@ -345,38 +241,24 @@ export const supabaseService = {
         total: session.total,
       };
 
-      let res = await supabase
+      const { data, error } = await supabase
         .from('completed_sessions')
-        .insert({ ...payload, client_phone: clientPhone })
+        .insert(payload)
         .select()
         .single();
 
-      if (res.error && res.error.code === '42703') {
-        res = await supabase
-          .from('completed_sessions')
-          .insert(payload)
-          .select()
-          .single();
-      }
-
-      return res.data;
+      if (error) console.error('Error adding completed session to Supabase:', error);
+      return data;
     } catch (err) {
       console.error('Supabase addCompletedSession exception:', err);
       return null;
     }
   },
 
-  async clearCompletedSessions(clientPhone = 'default') {
+  async clearCompletedSessions() {
     if (!isSupabaseConfigured) return;
     try {
-      let res = await supabase
-        .from('completed_sessions')
-        .delete()
-        .eq('client_phone', clientPhone);
-
-      if (res.error && res.error.code === '42703') {
-        await supabase.from('completed_sessions').delete().neq('id', 0);
-      }
+      await supabase.from('completed_sessions').delete().neq('id', 0);
     } catch (err) {
       console.error('Supabase clearCompletedSessions exception:', err);
     }

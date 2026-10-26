@@ -1,10 +1,5 @@
 import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
-import useSubscriptionStore from './subscriptionStore';
-
-const getClientPhone = () => {
-  return useSubscriptionStore.getState().currentClient?.phone || 'default';
-};
 
 const useDevicesStore = create((set, get) => ({
   categories: [],
@@ -17,17 +12,16 @@ const useDevicesStore = create((set, get) => ({
 
   // ── Initialize direct from Supabase ──
   initSync: async () => {
-    const phone = getClientPhone();
     try {
       const [dbDevices, dbCategories, dbSessions] = await Promise.all([
-        supabaseService.fetchDevices(phone),
-        supabaseService.fetchCategories(phone),
-        supabaseService.fetchCompletedSessions(phone),
+        supabaseService.fetchDevices(),
+        supabaseService.fetchCategories(),
+        supabaseService.fetchCompletedSessions(),
       ]);
 
       const maxSessionId = (dbSessions || []).reduce((max, s) => Math.max(max, s.id || 0), 0);
 
-      // إذا لم يكن لدى العميل أي أجهزة بعد، ننشئ له الأجهزة الافتراضية الـ 3 فوراً
+      // إذا كانت قاعدة البيانات فارغة تماماً فقط، نضع أجهزة وفئات افتراضية
       let finalDevices = dbDevices || [];
       if (finalDevices.length === 0) {
         const defaultDevices = [
@@ -39,15 +33,14 @@ const useDevicesStore = create((set, get) => ({
         for (let i = 0; i < defaultDevices.length; i++) {
           const dev = { ...defaultDevices[i], id: i + 1 };
           finalDevices.push(dev);
-          supabaseService.upsertDevice(dev, phone);
+          supabaseService.upsertDevice(dev);
         }
       }
 
-      // إذا كان المشترك جديد وليس لديه فئات بعد، نضع الفئات الأساسية
       let finalCategories = dbCategories || [];
       if (finalCategories.length === 0) {
         finalCategories = ['PlayStation 5', 'PlayStation 4', 'بلياردو', 'بينج بونج', 'كمبيوتر PC'];
-        finalCategories.forEach((cat) => supabaseService.addCategory(cat, phone));
+        finalCategories.forEach((cat) => supabaseService.addCategory(cat));
       }
 
       set({
@@ -70,23 +63,20 @@ const useDevicesStore = create((set, get) => ({
     if (!trimmed) return false;
     if (get().categories.includes(trimmed)) return false;
 
-    const phone = getClientPhone();
     set((state) => ({ categories: [...state.categories, trimmed] }));
-    await supabaseService.addCategory(trimmed, phone);
+    await supabaseService.addCategory(trimmed);
     return true;
   },
 
   deleteCategory: async (catName) => {
-    const phone = getClientPhone();
     set((state) => ({
       categories: state.categories.filter((c) => c !== catName),
     }));
-    await supabaseService.deleteCategory(catName, phone);
+    await supabaseService.deleteCategory(catName);
   },
 
   // ── Start a new session on a free device ──
   startSession: (deviceId, mode, timeType = 'open', targetMinutes = 60, customerName = '') => {
-    const phone = getClientPhone();
     let updatedDevice = null;
     set((state) => ({
       devices: state.devices.map((d) => {
@@ -109,13 +99,12 @@ const useDevicesStore = create((set, get) => ({
       }),
     }));
     if (updatedDevice) {
-      supabaseService.upsertDevice(updatedDevice, phone);
+      supabaseService.upsertDevice(updatedDevice);
     }
   },
 
   // ── Extend time for an active fixed session ──
   extendSessionTime: (deviceId, extraMinutes) => {
-    const phone = getClientPhone();
     let updatedDevice = null;
     set((state) => ({
       devices: state.devices.map((d) => {
@@ -133,13 +122,12 @@ const useDevicesStore = create((set, get) => ({
       }),
     }));
     if (updatedDevice) {
-      supabaseService.upsertDevice(updatedDevice, phone);
+      supabaseService.upsertDevice(updatedDevice);
     }
   },
 
   // ── End session: compute totals and archive ──
   endSession: (deviceId) => {
-    const phone = getClientPhone();
     const device = get().devices.find((d) => d.id === deviceId);
     if (!device?.session) return;
 
@@ -177,8 +165,8 @@ const useDevicesStore = create((set, get) => ({
       nextSessionId: state.nextSessionId + 1,
     }));
 
-    supabaseService.upsertDevice(freeDevice, phone);
-    supabaseService.addCompletedSession(completed, phone).then((saved) => {
+    supabaseService.upsertDevice(freeDevice);
+    supabaseService.addCompletedSession(completed).then((saved) => {
       if (saved?.id) {
         set((state) => ({
           completedSessions: state.completedSessions.map((s) =>
@@ -191,7 +179,6 @@ const useDevicesStore = create((set, get) => ({
 
   // ── Add a product to an active session ──
   addOrder: (deviceId, product) => {
-    const phone = getClientPhone();
     let updatedDevice = null;
     set((state) => {
       const nextId = state.nextOrderId;
@@ -219,13 +206,12 @@ const useDevicesStore = create((set, get) => ({
       };
     });
     if (updatedDevice) {
-      supabaseService.upsertDevice(updatedDevice, phone);
+      supabaseService.upsertDevice(updatedDevice);
     }
   },
 
   // ── Remove an order item ──
   removeOrder: (deviceId, orderId) => {
-    const phone = getClientPhone();
     let updatedDevice = null;
     set((state) => ({
       devices: state.devices.map((d) => {
@@ -241,13 +227,12 @@ const useDevicesStore = create((set, get) => ({
       }),
     }));
     if (updatedDevice) {
-      supabaseService.upsertDevice(updatedDevice, phone);
+      supabaseService.upsertDevice(updatedDevice);
     }
   },
 
   // ── Update single/multi price for a device (admin only) ──
   updateDevicePrice: (deviceId, priceType, value) => {
-    const phone = getClientPhone();
     const key = priceType === 'single' ? 'singlePrice' : 'multiPrice';
     let updatedDevice = null;
     set((state) => ({
@@ -260,13 +245,12 @@ const useDevicesStore = create((set, get) => ({
       }),
     }));
     if (updatedDevice) {
-      supabaseService.upsertDevice(updatedDevice, phone);
+      supabaseService.upsertDevice(updatedDevice);
     }
   },
 
   // ── Add new device (admin only) ──
   addDevice: (deviceData) => {
-    const phone = getClientPhone();
     const nameTrimmed = (deviceData.name || '').trim();
     const exists = get().devices.some(
       (d) => d.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
@@ -290,7 +274,7 @@ const useDevicesStore = create((set, get) => ({
       devices: [...state.devices, newDevice],
     }));
 
-    supabaseService.upsertDevice(newDevice, phone).then((saved) => {
+    supabaseService.upsertDevice(newDevice).then((saved) => {
       if (saved?.id) {
         set((state) => ({
           devices: state.devices.map((d) =>
@@ -305,10 +289,9 @@ const useDevicesStore = create((set, get) => ({
 
   // ── Delete a device (admin only) ──
   deleteDevice: (deviceId) => {
-    const phone = getClientPhone();
     const target = get().devices.find((d) => d.id === deviceId);
     if (target) {
-      supabaseService.deleteDevice(target.name, phone);
+      supabaseService.deleteDevice(target.name, target.id);
     }
     set((state) => ({
       devices: state.devices.filter((d) => d.id !== deviceId),
@@ -317,9 +300,8 @@ const useDevicesStore = create((set, get) => ({
 
   // ── Clear today's completed sessions (admin action) ──
   clearCompletedSessions: () => {
-    const phone = getClientPhone();
     set({ completedSessions: [], nextSessionId: 1 });
-    supabaseService.clearCompletedSessions(phone);
+    supabaseService.clearCompletedSessions();
   },
 }));
 

@@ -1,10 +1,5 @@
 import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
-import useSubscriptionStore from './subscriptionStore';
-
-const getClientPhone = () => {
-  return useSubscriptionStore.getState().currentClient?.phone || 'default';
-};
 
 const useAdminStore = create((set, get) => ({
   products: [],
@@ -14,9 +9,8 @@ const useAdminStore = create((set, get) => ({
 
   // ── Load products directly from Supabase ──
   initSync: async () => {
-    const phone = getClientPhone();
     try {
-      let dbProducts = await supabaseService.fetchProducts(phone);
+      let dbProducts = await supabaseService.fetchProducts();
       if (!dbProducts || dbProducts.length === 0) {
         const defaultDrinks = [
           { name: 'كانز بيبسي بارد', price: 15, category: 'مشروبات' },
@@ -28,7 +22,7 @@ const useAdminStore = create((set, get) => ({
         for (let i = 0; i < defaultDrinks.length; i++) {
           const item = { ...defaultDrinks[i], id: i + 1 };
           dbProducts.push(item);
-          supabaseService.addProduct(item, phone);
+          supabaseService.addProduct(item);
         }
       }
 
@@ -46,7 +40,6 @@ const useAdminStore = create((set, get) => ({
   },
 
   addProduct: async (product) => {
-    const phone = getClientPhone();
     const nameTrimmed = (product.name || '').trim();
     const exists = get().products.some(
       (p) => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
@@ -61,7 +54,7 @@ const useAdminStore = create((set, get) => ({
       nextProductId: tempId + 1,
     }));
 
-    const created = await supabaseService.addProduct(newProd, phone);
+    const created = await supabaseService.addProduct(newProd);
     if (created && created.id) {
       set((state) => ({
         products: state.products.map((p) =>
