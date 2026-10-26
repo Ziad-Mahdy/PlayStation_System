@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E2640" />
+      <stop offset="100%" stop-color="#0A0E18" />
+    </linearGradient>
+    <linearGradient id="neonBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="100%" stop-color="#0051FF" />
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Background -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#bgGrad)" stroke="url(#neonBlue)" stroke-width="4.5" />
+
+  <!-- Controller Body -->
+  <path d="M42 36 C30 36 20 45 18 64 C16 79 24 100 36 100 C43 100 48 93 54 86 C58 82 61 80 64 80 C67 80 70 82 74 86 C80 93 85 100 92 100 C104 100 112 79 110 64 C108 45 98 36 86 36 Z" 
+        fill="url(#neonBlue)" />
+
+  <!-- Inner Dark Grip & Details -->
+  <path d="M43 40 C33 40 24 48 22 64 C20 77 27 94 36 94 C41 94 45 88 51 81 C55 76 60 74 64 74 C68 74 73 76 77 81 C83 88 87 94 92 94 C101 94 108 77 106 64 C104 48 95 40 85 40 Z" 
+        fill="#0D111A" />
+
+  <!-- D-pad (Left) -->
+  <rect x="34" y="50" width="8" height="20" rx="2" fill="#B5C4FF" />
+  <rect x="28" y="56" width="20" height="8" rx="2" fill="#B5C4FF" />
+
+  <!-- Action Buttons (Right - PS shapes) -->
+  <!-- Triangle (Top) -->
+  <polygon points="94,50 90,57 98,57" fill="#00FFA3" />
+  <!-- Cross (Bottom) -->
+  <path d="M91.5 73.5 L96.5 68.5 M96.5 73.5 L91.5 68.5" stroke="#2E6BFF" stroke-width="2.5" stroke-linecap="round" />
+  <!-- Square (Left) -->
+  <rect x="82" y="58" width="6.5" height="6.5" rx="1" fill="#FF5C93" />
+  <!-- Circle (Right) -->
+  <circle cx="104" cy="61.2" r="3.5" fill="none" stroke="#FF4D4D" stroke-width="2" />
+
+  <!-- Joysticks -->
+  <circle cx="49" cy="74" r="8.5" fill="#1C2233" stroke="url(#neonBlue)" stroke-width="2" />
+  <circle cx="49" cy="74" r="3.5" fill="#00D2FF" />
+
+  <circle cx="79" cy="74" r="8.5" fill="#1C2233" stroke="url(#neonBlue)" stroke-width="2" />
+  <circle cx="79" cy="74" r="3.5" fill="#00D2FF" />
+
+  <!-- Touchpad & Lightbar -->
+  <rect x="56" y="44" width="16" height="10" rx="2.5" fill="#171C2B" stroke="#354060" stroke-width="1.5" />
+  <line x1="57" y1="44" x2="71" y2="44" stroke="#00D2FF" stroke-width="2" stroke-linecap="round" />
+</svg>

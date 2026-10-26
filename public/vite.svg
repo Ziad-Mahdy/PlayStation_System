@@ -1,1 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E2640" />
+      <stop offset="100%" stop-color="#0A0E18" />
+    </linearGradient>
+    <linearGradient id="neonBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="100%" stop-color="#0051FF" />
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Background -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#bgGrad)" stroke="url(#neonBlue)" stroke-width="4.5" />
+
+  <!-- Controller Body -->
+  <path d="M42 36 C30 36 20 45 18 64 C16 79 24 100 36 100 C43 100 48 93 54 86 C58 82 61 80 64 80 C67 80 70 82 74 86 C80 93 85 100 92 100 C104 100 112 79 110 64 C108 45 98 36 86 36 Z" 
+        fill="url(#neonBlue)" />
+
+  <!-- Inner Dark Grip & Details -->
+  <path d="M43 40 C33 40 24 48 22 64 C20 77 27 94 36 94 C41 94 45 88 51 81 C55 76 60 74 64 74 C68 74 73 76 77 81 C83 88 87 94 92 94 C101 94 108 77 106 64 C104 48 95 40 85 40 Z" 
+        fill="#0D111A" />
+
+  <!-- D-pad (Left) -->
+  <rect x="34" y="50" width="8" height="20" rx="2" fill="#B5C4FF" />
+  <rect x="28" y="56" width="20" height="8" rx="2" fill="#B5C4FF" />
+
+  <!-- Action Buttons (Right - PS shapes) -->
+  <!-- Triangle (Top) -->
+  <polygon points="94,50 90,57 98,57" fill="#00FFA3" />
+  <!-- Cross (Bottom) -->
+  <path d="M91.5 73.5 L96.5 68.5 M96.5 73.5 L91.5 68.5" stroke="#2E6BFF" stroke-width="2.5" stroke-linecap="round" />
+  <!-- Square (Left) -->
+  <rect x="82" y="58" width="6.5" height="6.5" rx="1" fill="#FF5C93" />
+  <!-- Circle (Right) -->
+  <circle cx="104" cy="61.2" r="3.5" fill="none" stroke="#FF4D4D" stroke-width="2" />
+
+  <!-- Joysticks -->
+  <circle cx="49" cy="74" r="8.5" fill="#1C2233" stroke="url(#neonBlue)" stroke-width="2" />
+  <circle cx="49" cy="74" r="3.5" fill="#00D2FF" />
+
+  <circle cx="79" cy="74" r="8.5" fill="#1C2233" stroke="url(#neonBlue)" stroke-width="2" />
+  <circle cx="79" cy="74" r="3.5" fill="#00D2FF" />
+
+  <!-- Touchpad & Lightbar -->
+  <rect x="56" y="44" width="16" height="10" rx="2.5" fill="#171C2B" stroke="#354060" stroke-width="1.5" />
+  <line x1="57" y1="44" x2="71" y2="44" stroke="#00D2FF" stroke-width="2" stroke-linecap="round" />
+</svg>
