@@ -40,10 +40,22 @@ export default function DevicesPage() {
   const filteredDevices = useMemo(() => {
     return devices.filter((device) => {
       // Type / Category filter
-      if (filterType === 'vip') {
-        if (!device.isVIP) return false;
-      } else if (filterType !== 'all') {
-        if (device.type !== filterType) return false;
+      if (filterType !== 'all') {
+        const isVipFilter =
+          filterType === 'VIP' ||
+          filterType === 'vip' ||
+          filterType === 'غرف VIP' ||
+          filterType === 'غرف VIP ⭐';
+
+        if (isVipFilter) {
+          if (!device.isVIP && (device.type || '').toUpperCase() !== 'VIP') return false;
+        } else if (filterType === 'PS4' || filterType === 'PlayStation 4') {
+          if (device.type !== 'PS4' && device.type !== 'PlayStation 4') return false;
+        } else if (filterType === 'PS5' || filterType === 'PlayStation 5') {
+          if (device.type !== 'PS5' && device.type !== 'PlayStation 5') return false;
+        } else {
+          if (device.type !== filterType) return false;
+        }
       }
 
       // Status filter
@@ -119,31 +131,23 @@ export default function DevicesPage() {
             {t('devices_filter_all')}
           </button>
 
-          {/* Dynamic categories from store */}
+          {/* Dynamic categories from store (PS4, PS5, VIP, or any added by admin) */}
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setFilterType(cat)}
-              className={`px-3 sm:px-space-md py-2 sm:py-2.5 rounded-xl font-label-md sm:font-label-lg text-xs sm:text-label-lg transition-all shrink-0 ${
+              className={`px-3 sm:px-space-md py-2 sm:py-2.5 rounded-xl font-label-md sm:font-label-lg text-xs sm:text-label-lg transition-all shrink-0 flex items-center gap-1 ${
                 filterType === cat
                   ? 'bg-primary-container text-on-primary-container shadow-md'
                   : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
               }`}
             >
-              {cat}
+              {(cat === 'VIP' || cat.toLowerCase() === 'vip') && (
+                <span className="text-amber-400">⭐</span>
+              )}
+              <span>{cat}</span>
             </button>
           ))}
-
-          <button
-            onClick={() => setFilterType('vip')}
-            className={`px-3 sm:px-space-md py-2 sm:py-2.5 rounded-xl font-label-md sm:font-label-lg text-xs sm:text-label-lg transition-all shrink-0 ${
-              filterType === 'vip'
-                ? 'bg-primary-container text-on-primary-container shadow-md'
-                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
-            }`}
-          >
-            {t('devices_filter_vip')}
-          </button>
         </div>
 
         {/* Right side: Status Filter & Search input */}

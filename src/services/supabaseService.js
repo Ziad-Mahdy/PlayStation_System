@@ -174,13 +174,19 @@ export const supabaseService = {
     }
   },
 
-  async deleteCategory(name, identifier) {
+  async deleteCategory(name, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return;
     try {
+      const clientPhone = phone || identifier;
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
       await supabase
         .from('categories')
         .delete()
-        .eq('name', name);
+        .eq('name', name)
+        .or(orFilter);
     } catch (err) {
       console.error('deleteCategory exception:', err);
     }

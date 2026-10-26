@@ -37,10 +37,44 @@ const saveDevicesCache = (devices) => {
   }
 };
 
-const DEFAULT_CATEGORIES = ['PlayStation 5', 'PlayStation 4', 'بلياردو', 'بينج بونج', 'كمبيوتر PC'];
+const DEFAULT_CATEGORIES = ['PS4', 'PS5', 'VIP'];
+
+const getCachedCategories = () => {
+  const id = getClientIdentifier();
+  if (!id) return DEFAULT_CATEGORIES;
+  try {
+    const raw = localStorage.getItem(`ps_categories_cache_${id}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_CATEGORIES;
+};
+
+const saveCategoriesCache = (categories) => {
+  const id = getClientIdentifier();
+  if (id && categories) {
+    try {
+      localStorage.setItem(`ps_categories_cache_${id}`, JSON.stringify(categories));
+    } catch (e) {}
+  }
+};
+
+const isCategoriesInitialized = (id) => {
+  if (!id) return false;
+  return localStorage.getItem(`ps_cat_init_${id}`) === 'true';
+};
+
+const markCategoriesInitialized = (id) => {
+  if (!id) return;
+  try {
+    localStorage.setItem(`ps_cat_init_${id}`, 'true');
+  } catch (e) {}
+};
 
 const useDevicesStore = create((set, get) => ({
-  categories: DEFAULT_CATEGORIES,
+  categories: getCachedCategories(),
   devices: getCachedDevices(), // استرجاع فوري من الكاش عند الـ Refresh لضمان عدم اختفاء الأجهزة أبداً
   completedSessions: [],
   nextSessionId: 1,
@@ -64,7 +98,26 @@ const useDevicesStore = create((set, get) => ({
       ]);
 
       const maxSessionId = (dbSessions || []).reduce((max, s) => Math.max(max, s.id || 0), 0);
-      const finalCategories = dbCategories && dbCategories.length > 0 ? dbCategories : DEFAULT_CATEGORIES;
+
+      const isInitialized = isCategoriesInitialized(identifier);
+      let finalCategories = [];
+
+      if (dbCategories && dbCategories.length > 0) {
+        finalCategories = dbCategories;
+        markCategoriesInitialized(identifier);
+      } else if (isInitialized) {
+        finalCategories = getCachedCategories();
+      } else {
+        // أول دخول للكلاينت: نضع الفئات الافتراضية [PS4, PS5, VIP] ونحفظها في السيرفر والكاش
+        finalCategories = DEFAULT_CATEGORIES;
+        markCategoriesInitialized(identifier);
+        if (identifier) {
+          for (const cat of DEFAULT_CATEGORIES) {
+            supabaseService.addCategory(cat, identifier, client?.phone);
+          }
+        }
+      }
+      saveCategoriesCache(finalCategories);
 
       const cached = getCachedDevices();
       const currentDevices = (get().devices && get().devices.length > 0) ? get().devices : cached;
@@ -126,7 +179,10 @@ const useDevicesStore = create((set, get) => ({
 
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
-    set((state) => ({ categories: [...state.categories, trimmed] }));
+    markCategoriesInitialized(identifier);
+    const newCategories = [...get().categories, trimmed];
+    set({ categories: newCategories });
+    saveCategoriesCache(newCategories);
     if (identifier) {
       await supabaseService.addCategory(trimmed, identifier, client?.phone);
     }
@@ -136,11 +192,12 @@ const useDevicesStore = create((set, get) => ({
   deleteCategory: async (catName) => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
-    set((state) => ({
-      categories: state.categories.filter((c) => c !== catName),
-    }));
+    markCategoriesInitialized(identifier);
+    const newCategories = get().categories.filter((c) => c !== catName);
+    set({ categories: newCategories });
+    saveCategoriesCache(newCategories);
     if (identifier) {
-      await supabaseService.deleteCategory(catName, identifier);
+      await supabaseService.deleteCategory(catName, identifier, client?.phone);
     }
   },
 

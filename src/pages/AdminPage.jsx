@@ -47,7 +47,7 @@ export default function AdminPage() {
   const [isAddDeviceModalOpen, setIsAddDeviceModalOpen] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
     name: '',
-    type: 'PlayStation 5',
+    type: 'PS4',
     isVIP: false,
     singlePrice: '45',
     multiPrice: '35',
@@ -214,7 +214,7 @@ export default function AdminPage() {
     setIsAddDeviceModalOpen(false);
     setNewDeviceForm({
       name: '',
-      type: 'PS5',
+      type: categories[0] || 'PS4',
       isVIP: false,
       singlePrice: '45',
       multiPrice: '35',
@@ -680,7 +680,7 @@ export default function AdminPage() {
                 onClick={() => {
                   setNewDeviceForm({
                     name: `جهاز ${devices.length + 1}`,
-                    type: categories[0] || 'PlayStation 5',
+                    type: categories[0] || 'PS4',
                     isVIP: false,
                     singlePrice: '45',
                     multiPrice: '35',
@@ -751,23 +751,27 @@ export default function AdminPage() {
 
             {/* Category pills list */}
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1">
-              {categories.map((cat) => (
-                <div
-                  key={cat}
-                  className="bg-surface-container-high border border-outline-variant/40 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl flex items-center gap-1.5 sm:gap-2 shadow-sm text-on-surface font-label-md text-xs sm:text-label-md"
-                >
-                  <span>{cat}</span>
-                  {categories.length > 1 && (
+              {categories.length === 0 ? (
+                <span className="text-xs text-on-surface-variant italic">
+                  {isEn ? 'No categories registered. Click "+ Add Category" to create one.' : 'لا توجد فئات مسجلة حالياً، اضغط "+ إضافة قسم جديد" لإضافة أقسامك.'}
+                </span>
+              ) : (
+                categories.map((cat) => (
+                  <div
+                    key={cat}
+                    className="bg-surface-container-high border border-outline-variant/40 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl flex items-center gap-1.5 sm:gap-2 shadow-sm text-on-surface font-label-md text-xs sm:text-label-md"
+                  >
+                    <span>{cat}</span>
                     <button
                       onClick={() => handleDeleteCategoryClick(cat)}
                       className="text-outline hover:text-error transition-colors flex items-center"
-                      title={`حذف فئة ${cat}`}
+                      title={isEn ? `Delete ${cat}` : `حذف فئة ${cat}`}
                     >
                       <span className="material-symbols-outlined text-[15px]">close</span>
                     </button>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -1107,11 +1111,15 @@ export default function AdminPage() {
                       }
                       className="w-full h-10 sm:h-11 bg-surface-container-low rounded-xl px-2 sm:px-3 font-body-md text-xs sm:text-sm text-on-surface border border-outline-variant/40 focus:border-primary outline-none"
                     >
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
+                      {categories.length > 0 ? (
+                        categories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="PS4">PS4</option>
+                      )}
                     </select>
                   </div>
 
