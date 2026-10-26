@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { subscriptionService } from '../services/subscriptionService';
 
 // Default Master Developer Password (يمكن تغييرها أو وضعها في .env)
-const DEV_MASTER_PASSWORD = import.meta.env.VITE_DEV_PASSWORD || 'Dev@2026';
+const DEV_MASTER_PASSWORD = import.meta.env.VITE_DEV_PASSWORD || 'Mahdy@111';
 
 // استعادة جلسة الكلاينت المخزنة في المتصفح إن وجدت
 const getSavedClient = () => {
