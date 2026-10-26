@@ -22,6 +22,7 @@ export default function DeveloperPanel() {
   const toggleSuspend = useSubscriptionStore((s) => s.toggleSuspend);
   const updateAdminPassword = useSubscriptionStore((s) => s.updateAdminPassword);
   const deleteSubscriber = useSubscriptionStore((s) => s.deleteSubscriber);
+  const resetDeviceBinding = useSubscriptionStore((s) => s.resetDeviceBinding);
 
   // Filters & search
   const [search, setSearch] = useState('');
@@ -172,6 +173,18 @@ export default function DeveloperPanel() {
         toast.success('تم حذف المشترك بنجاح');
       } else {
         toast.error('فشل حذف المشترك');
+      }
+    }
+  };
+
+  // Handle Reset Device Binding
+  const handleResetDevice = async (sub) => {
+    if (window.confirm(`هل تريد فك ربط الكود بجهاز (${sub.client_name})؟ سيتمكن من تسجيل الدخول من جهاز كمبيوتر جديد.`)) {
+      const ok = await resetDeviceBinding(sub.id);
+      if (ok) {
+        toast.success('تم فك ربط الجهاز بنجاح! يمكن للعميل الآن الدخول من جهاز جديد 🔓');
+      } else {
+        toast.error('فشل فك ربط الجهاز');
       }
     }
   };
@@ -352,6 +365,7 @@ export default function DeveloperPanel() {
                   <th className="py-4 px-5">رقم الهاتف</th>
                   <th className="py-4 px-5">كود التفعيل</th>
                   <th className="py-4 px-5">حالة الاشتراك والمدة</th>
+                  <th className="py-4 px-5">سيريال الجهاز المربوط</th>
                   <th className="py-4 px-5">باسوورد الأدمن</th>
                   <th className="py-4 px-5 text-center">إجراءات التحكم السريع</th>
                 </tr>
@@ -412,6 +426,33 @@ export default function DeveloperPanel() {
                             </span>
                           )}
                         </div>
+                      </td>
+
+                      {/* Device Serial Binding */}
+                      <td className="py-4 px-5">
+                        {sub.device_serial ? (
+                          <div className="flex items-center gap-2">
+                            <span
+                              title={sub.device_serial}
+                              className="font-mono text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg border border-emerald-500/25 flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">lock</span>
+                              <span>{sub.device_serial.slice(0, 14)}...</span>
+                            </span>
+                            <button
+                              title="فك ربط الجهاز (للسماح بالدخول من جهاز جديد)"
+                              onClick={() => handleResetDevice(sub)}
+                              className="text-xs text-on-surface-variant hover:text-amber-400 p-1 rounded transition-colors cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">lock_open</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-on-surface-variant/70 flex items-center gap-1 font-mono">
+                            <span className="material-symbols-outlined text-[14px]">lock_open</span>
+                            <span>غير مربوط بعد</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* Admin Password */}

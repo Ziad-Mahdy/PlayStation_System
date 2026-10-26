@@ -2,49 +2,74 @@ import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
 import useSubscriptionStore from './subscriptionStore';
 
-const getClientPhone = () => {
-  return useSubscriptionStore.getState().currentClient?.phone;
+const getClientIdentifier = () => {
+  const client = useSubscriptionStore.getState().currentClient;
+  return client?.code || client?.phone || null;
+};
+
+const getCachedDevices = () => {
+  const id = getClientIdentifier();
+  if (!id) return [];
+  try {
+    const raw = localStorage.getItem(`ps_devices_cache_${id}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveDevicesCache = (devices) => {
+  const id = getClientIdentifier();
+  if (id && devices) {
+    try {
+      localStorage.setItem(`ps_devices_cache_${id}`, JSON.stringify(devices));
+    } catch (e) {}
+  }
 };
 
 const DEFAULT_CATEGORIES = ['PlayStation 5', 'PlayStation 4', 'بلياردو', 'بينج بونج', 'كمبيوتر PC'];
 
 const useDevicesStore = create((set, get) => ({
   categories: DEFAULT_CATEGORIES,
-  devices: [],
+  devices: getCachedDevices(), // استرجاع فوري من الكاش عند الـ Refresh حتى لا تختفي الداتا
   completedSessions: [],
   nextSessionId: 1,
   nextOrderId: 1000,
-  isLoading: true,
+  isLoading: false,
   isSynced: false,
 
-  // ── جلب داتا الكلاينت فقط من Supabase ──
+  // ── جلب داتا الكلاينت فقط من Supabase مع حفظها في الكاش ──
   initSync: async () => {
-    const phone = getClientPhone();
-    if (!phone) {
+    const identifier = getClientIdentifier();
+    if (!identifier) {
       set({ devices: [], completedSessions: [], isLoading: false });
       return;
     }
 
     try {
       const [dbDevices, dbCategories, dbSessions] = await Promise.all([
-        supabaseService.fetchDevices(phone),
-        supabaseService.fetchCategories(phone),
-        supabaseService.fetchCompletedSessions(phone),
+        supabaseService.fetchDevices(identifier),
+        supabaseService.fetchCategories(identifier),
+        supabaseService.fetchCompletedSessions(identifier),
       ]);
 
       const maxSessionId = (dbSessions || []).reduce((max, s) => Math.max(max, s.id || 0), 0);
-
-      // الفئات: نأخذ فئات المشترك أو الفئات الافتراضية
       const finalCategories = dbCategories && dbCategories.length > 0 ? dbCategories : DEFAULT_CATEGORIES;
 
-      set({
-        devices: dbDevices || [], // يبدأ فارغاً تماماً للكلاينت الجديد كما طلب المستخدم
-        categories: finalCategories,
-        completedSessions: dbSessions || [],
-        nextSessionId: maxSessionId + 1,
-        isLoading: false,
-        isSynced: true,
-      });
+      // لو السيرفر رجع أجهزة، نحدث الـ State ونحفظها في الكاش الخاص بهذا الكود
+      if (dbDevices) {
+        saveDevicesCache(dbDevices);
+        set({
+          devices: dbDevices,
+          categories: finalCategories,
+          completedSessions: dbSessions || [],
+          nextSessionId: maxSessionId + 1,
+          isLoading: false,
+          isSynced: true,
+        });
+      } else {
+        set({ isLoading: false });
+      }
     } catch (err) {
       console.error('Failed to sync devices store with Supabase:', err);
       set({ isLoading: false });
@@ -57,27 +82,27 @@ const useDevicesStore = create((set, get) => ({
     if (!trimmed) return false;
     if (get().categories.includes(trimmed)) return false;
 
-    const phone = getClientPhone();
+    const identifier = getClientIdentifier();
     set((state) => ({ categories: [...state.categories, trimmed] }));
-    if (phone) {
-      await supabaseService.addCategory(trimmed, phone);
+    if (identifier) {
+      await supabaseService.addCategory(trimmed, identifier);
     }
     return true;
   },
 
   deleteCategory: async (catName) => {
-    const phone = getClientPhone();
+    const identifier = getClientIdentifier();
     set((state) => ({
       categories: state.categories.filter((c) => c !== catName),
     }));
-    if (phone) {
-      await supabaseService.deleteCategory(catName, phone);
+    if (identifier) {
+      await supabaseService.deleteCategory(catName, identifier);
     }
   },
 
   // ── إضافة جهاز جديد للكلاينت ──
   addDevice: async (deviceData) => {
-    const phone = getClientPhone();
+    const identifier = getClientIdentifier();
     const nameTrimmed = (deviceData.name || '').trim();
     const exists = get().devices.some(
       (d) => d.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
@@ -96,16 +121,16 @@ const useDevicesStore = create((set, get) => ({
       session: null,
     };
 
-    set((state) => ({
-      devices: [...state.devices, newDevice],
-    }));
+    const updatedDevices = [...get().devices, newDevice];
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
 
-    if (phone) {
-      const created = await supabaseService.insertDevice(newDevice, phone);
+    if (identifier) {
+      const created = await supabaseService.insertDevice(newDevice, identifier);
       if (created && created.id) {
-        set((state) => ({
-          devices: state.devices.map((d) => (d.id === tempId ? { ...d, id: created.id } : d)),
-        }));
+        const withRealId = get().devices.map((d) => (d.id === tempId ? { ...d, id: created.id } : d));
+        set({ devices: withRealId });
+        saveDevicesCache(withRealId);
       }
     }
 
@@ -114,35 +139,36 @@ const useDevicesStore = create((set, get) => ({
 
   // ── حذف جهاز ──
   deleteDevice: (deviceId) => {
-    set((state) => ({
-      devices: state.devices.filter((d) => d.id !== deviceId),
-    }));
+    const updatedDevices = get().devices.filter((d) => d.id !== deviceId);
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
     supabaseService.deleteDevice(deviceId);
   },
 
   // ── بدء جلسة جديدة على جهاز ──
   startSession: (deviceId, mode, timeType = 'open', targetMinutes = 60, customerName = '') => {
     let updatedSession = null;
-    set((state) => ({
-      devices: state.devices.map((d) => {
-        if (d.id === deviceId) {
-          updatedSession = {
-            startTime: Date.now(),
-            mode,
-            timeType,
-            targetMinutes: timeType === 'fixed' ? Math.max(1, Number(targetMinutes)) : null,
-            customerName: (customerName || '').trim(),
-            orders: [],
-          };
-          return {
-            ...d,
-            status: 'busy',
-            session: updatedSession,
-          };
-        }
-        return d;
-      }),
-    }));
+    const updatedDevices = get().devices.map((d) => {
+      if (d.id === deviceId) {
+        updatedSession = {
+          startTime: Date.now(),
+          mode,
+          timeType,
+          targetMinutes: timeType === 'fixed' ? Math.max(1, Number(targetMinutes)) : null,
+          customerName: (customerName || '').trim(),
+          orders: [],
+        };
+        return {
+          ...d,
+          status: 'busy',
+          session: updatedSession,
+        };
+      }
+      return d;
+    });
+
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
 
     if (updatedSession) {
       supabaseService.updateDevice(deviceId, {
@@ -155,21 +181,22 @@ const useDevicesStore = create((set, get) => ({
   // ── تمديد وقت جلسة محددة ──
   extendSessionTime: (deviceId, extraMinutes) => {
     let updatedSession = null;
-    set((state) => ({
-      devices: state.devices.map((d) => {
-        if (d.id !== deviceId || !d.session) return d;
-        const currentTarget = d.session.targetMinutes || 0;
-        updatedSession = {
-          ...d.session,
-          timeType: 'fixed',
-          targetMinutes: currentTarget + Number(extraMinutes),
-        };
-        return {
-          ...d,
-          session: updatedSession,
-        };
-      }),
-    }));
+    const updatedDevices = get().devices.map((d) => {
+      if (d.id !== deviceId || !d.session) return d;
+      const currentTarget = d.session.targetMinutes || 0;
+      updatedSession = {
+        ...d.session,
+        timeType: 'fixed',
+        targetMinutes: currentTarget + Number(extraMinutes),
+      };
+      return {
+        ...d,
+        session: updatedSession,
+      };
+    });
+
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
 
     if (updatedSession) {
       supabaseService.updateDevice(deviceId, { session: updatedSession });
@@ -179,31 +206,33 @@ const useDevicesStore = create((set, get) => ({
   // ── إضافة طلب / مشروب لجهاز ──
   addOrder: (deviceId, product) => {
     let updatedSession = null;
-    set((state) => {
-      const nextId = state.nextOrderId;
+    const nextId = get().nextOrderId;
+
+    const updatedDevices = get().devices.map((d) => {
+      if (d.id !== deviceId || !d.session) return d;
+      const existing = d.session.orders.find((o) => o.name === product.name);
+      updatedSession = {
+        ...d.session,
+        orders: existing
+          ? d.session.orders.map((o) =>
+              o.name === product.name ? { ...o, qty: o.qty + 1 } : o
+            )
+          : [
+              ...d.session.orders,
+              { id: nextId, name: product.name, price: product.price, qty: 1 },
+            ],
+      };
       return {
-        nextOrderId: nextId + 1,
-        devices: state.devices.map((d) => {
-          if (d.id !== deviceId || !d.session) return d;
-          const existing = d.session.orders.find((o) => o.name === product.name);
-          updatedSession = {
-            ...d.session,
-            orders: existing
-              ? d.session.orders.map((o) =>
-                  o.name === product.name ? { ...o, qty: o.qty + 1 } : o
-                )
-              : [
-                  ...d.session.orders,
-                  { id: nextId, name: product.name, price: product.price, qty: 1 },
-                ],
-          };
-          return {
-            ...d,
-            session: updatedSession,
-          };
-        }),
+        ...d,
+        session: updatedSession,
       };
     });
+
+    set({
+      nextOrderId: nextId + 1,
+      devices: updatedDevices,
+    });
+    saveDevicesCache(updatedDevices);
 
     if (updatedSession) {
       supabaseService.updateDevice(deviceId, { session: updatedSession });
@@ -213,19 +242,20 @@ const useDevicesStore = create((set, get) => ({
   // ── حذف طلب من جهاز ──
   removeOrder: (deviceId, orderId) => {
     let updatedSession = null;
-    set((state) => ({
-      devices: state.devices.map((d) => {
-        if (d.id !== deviceId || !d.session) return d;
-        updatedSession = {
-          ...d.session,
-          orders: d.session.orders.filter((o) => o.id !== orderId),
-        };
-        return {
-          ...d,
-          session: updatedSession,
-        };
-      }),
-    }));
+    const updatedDevices = get().devices.map((d) => {
+      if (d.id !== deviceId || !d.session) return d;
+      updatedSession = {
+        ...d.session,
+        orders: d.session.orders.filter((o) => o.id !== orderId),
+      };
+      return {
+        ...d,
+        session: updatedSession,
+      };
+    });
+
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
 
     if (updatedSession) {
       supabaseService.updateDevice(deviceId, { session: updatedSession });
@@ -234,7 +264,7 @@ const useDevicesStore = create((set, get) => ({
 
   // ── إنهاء الحساب وقفل الفاتورة ──
   endSession: (deviceId) => {
-    const phone = getClientPhone();
+    const identifier = getClientIdentifier();
     const device = get().devices.find((d) => d.id === deviceId);
     if (!device?.session) return;
 
@@ -264,20 +294,21 @@ const useDevicesStore = create((set, get) => ({
       total: parseFloat((timeCost + ordersCost).toFixed(2)),
     };
 
+    const updatedDevices = get().devices.map((d) =>
+      d.id === deviceId ? { ...d, status: 'free', session: null } : d
+    );
+
     set((state) => ({
-      devices: state.devices.map((d) =>
-        d.id === deviceId ? { ...d, status: 'free', session: null } : d
-      ),
+      devices: updatedDevices,
       completedSessions: [...state.completedSessions, { ...completed, id: state.nextSessionId }],
       nextSessionId: state.nextSessionId + 1,
     }));
+    saveDevicesCache(updatedDevices);
 
-    // تحديث الجهاز في السيرفر السحابي ليصبح free
     supabaseService.updateDevice(deviceId, { status: 'free', session: null });
 
-    // حفظ الفاتورة في السيرفر السحابي
-    if (phone) {
-      supabaseService.addCompletedSession(completed, phone).then((saved) => {
+    if (identifier) {
+      supabaseService.addCompletedSession(completed, identifier).then((saved) => {
         if (saved?.id) {
           set((state) => ({
             completedSessions: state.completedSessions.map((s) =>
@@ -294,21 +325,21 @@ const useDevicesStore = create((set, get) => ({
     const key = priceType === 'single' ? 'singlePrice' : 'multiPrice';
     const numVal = parseFloat(value) || 0;
 
-    set((state) => ({
-      devices: state.devices.map((d) =>
-        d.id === deviceId ? { ...d, [key]: numVal } : d
-      ),
-    }));
+    const updatedDevices = get().devices.map((d) =>
+      d.id === deviceId ? { ...d, [key]: numVal } : d
+    );
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
 
     supabaseService.updateDevice(deviceId, { [key]: numVal });
   },
 
   // ── تفريغ فواتير اليوم ──
   clearCompletedSessions: () => {
-    const phone = getClientPhone();
+    const identifier = getClientIdentifier();
     set({ completedSessions: [], nextSessionId: 1 });
-    if (phone) {
-      supabaseService.clearCompletedSessions(phone);
+    if (identifier) {
+      supabaseService.clearCompletedSessions(identifier);
     }
   },
 }));

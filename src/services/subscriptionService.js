@@ -1,7 +1,8 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getDeviceSerial } from '../lib/deviceFingerprint';
 
 export const subscriptionService = {
-  // ── تسجيل دخول والتحقق من المشترك ──
+  // ── تسجيل دخول والتحقق من المشترك وربط الجهاز بالسيريال ──
   async loginAndVerifyClient(phone, code) {
     if (!isSupabaseConfigured) {
       return { success: false, message: 'قاعدة بيانات Supabase غير متصلة' };
@@ -10,6 +11,7 @@ export const subscriptionService = {
     try {
       const cleanPhone = (phone || '').trim();
       const cleanCode = (code || '').trim().toUpperCase();
+      const currentSerial = await getDeviceSerial();
 
       const { data, error } = await supabase
         .from('subscriptions')
@@ -29,29 +31,63 @@ export const subscriptionService = {
         };
       }
 
-      // ── أول تسجيل دخول: تفعيل الكود وبدء العداد ──
+      // ── فحص ربط السيريال لمنع مشاركة الكود على جهاز آخر ──
+      if (data.device_serial && data.device_serial !== currentSerial) {
+        return {
+          success: false,
+          message: '🚫 عفواً، هذا الكود مفعل بالفعل ومربوط بجهاز كمبيوتر آخر. لا يمكن استخدام الكود على أكثر من جهاز.',
+        };
+      }
+
+      // ── أول تسجيل دخول: تفعيل الكود وربطه بسيريال هذا الجهاز ──
       if (!data.is_active || !data.activated_at) {
         const now = new Date();
         const durationDays = Number(data.duration_days) || 30;
         const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
+        const updatePayload = {
+          is_active: true,
+          activated_at: now.toISOString(),
+          expires_at: expiresAt.toISOString(),
+          device_serial: currentSerial, // ربط دائم بسيريال هذا الجهاز
+        };
+
         const { data: activatedClient, error: updateErr } = await supabase
           .from('subscriptions')
-          .update({
-            is_active: true,
-            activated_at: now.toISOString(),
-            expires_at: expiresAt.toISOString(),
-          })
+          .update(updatePayload)
           .eq('id', data.id)
           .select()
           .single();
 
         if (updateErr) {
           console.error('Error activating client subscription:', updateErr);
+          // إذا كان عمود device_serial غير موجود بعد في الجدول، نحدث بدونه مؤقتاً
+          if (updateErr.code === '42703') {
+            const fallback = await supabase
+              .from('subscriptions')
+              .update({
+                is_active: true,
+                activated_at: now.toISOString(),
+                expires_at: expiresAt.toISOString(),
+              })
+              .eq('id', data.id)
+              .select()
+              .single();
+            return { success: true, client: fallback.data, isNewActivation: true };
+          }
           return { success: false, message: 'حدث خطأ أثناء تفعيل الاشتراك' };
         }
 
         return { success: true, client: activatedClient, isNewActivation: true };
+      }
+
+      // إذا كان الكود مفعل مسبقاً لكن سيريال الجهاز كان فارغاً (مثلاً بعد فك الربط):
+      if (!data.device_serial) {
+        await supabase
+          .from('subscriptions')
+          .update({ device_serial: currentSerial })
+          .eq('id', data.id);
+        data.device_serial = currentSerial;
       }
 
       // ── الكود مفعل مسبقاً: فحص تاريخ الانتهاء ──
@@ -126,6 +162,7 @@ export const subscriptionService = {
           notes: subscriberData.notes?.trim() || '',
           is_active: false,
           is_suspended: false,
+          device_serial: null,
           activated_at: null,
           expires_at: null,
         })
@@ -147,7 +184,6 @@ export const subscriptionService = {
   async extendSubscriber(id, extraDays) {
     if (!isSupabaseConfigured) return null;
     try {
-      // جلب البيانات الحالية
       const { data: current, error: getErr } = await supabase
         .from('subscriptions')
         .select('*')
@@ -161,7 +197,6 @@ export const subscriptionService = {
 
       if (current.expires_at) {
         const currentExpiry = new Date(current.expires_at);
-        // إذا كان منتهياً، نبدأ التمديد من لحظة الآن
         const baseTime = currentExpiry > new Date() ? currentExpiry.getTime() : Date.now();
         newExpiresAt = new Date(baseTime + Number(extraDays) * 24 * 60 * 60 * 1000).toISOString();
       }
@@ -181,6 +216,22 @@ export const subscriptionService = {
     } catch (err) {
       console.error('extendSubscriber exception:', err);
       throw err;
+    }
+  },
+
+  // ── [للمطور] فك ربط جهاز المشترك (السماح له بالدخول من جهاز جديد) ──
+  async resetDeviceBinding(id) {
+    if (!isSupabaseConfigured) return false;
+    try {
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ device_serial: null })
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('resetDeviceBinding exception:', err);
+      return false;
     }
   },
 

@@ -163,6 +163,23 @@ const useSubscriptionStore = create((set, get) => ({
     }
   },
 
+  resetDeviceBinding: async (id) => {
+    try {
+      const ok = await subscriptionService.resetDeviceBinding(id);
+      if (ok) {
+        set((state) => ({
+          subscribers: state.subscribers.map((s) =>
+            s.id === id ? { ...s, device_serial: null } : s
+          ),
+        }));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  },
+
   updateAdminPassword: async (id, newPassword) => {
     try {
       const updated = await subscriptionService.updateAdminPassword(id, newPassword);
