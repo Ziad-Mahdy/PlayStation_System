@@ -108,36 +108,36 @@ export default function SessionModal({ deviceId, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-space-md bg-surface-container-lowest/80 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-space-md bg-surface-container-lowest/80 backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="relative w-full max-w-2xl bg-surface-container rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.85)] flex flex-col max-h-[92vh] overflow-hidden border border-outline-variant/30">
         {/* ── Modal Header ── */}
-        <div className="bg-surface-container-high px-space-xl py-space-md flex items-center justify-between shrink-0 shadow-sm border-b border-outline-variant/20">
-          <div className="flex items-center gap-space-md">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isExpired ? 'bg-error-container text-error' : 'bg-primary-container/20 text-primary'}`}>
-              <span className="material-symbols-outlined text-[24px]">sports_esports</span>
+        <div className="bg-surface-container-high px-4 py-3 sm:px-space-xl sm:py-space-md flex items-center justify-between shrink-0 shadow-sm border-b border-outline-variant/20">
+          <div className="flex items-center gap-2 sm:gap-space-md min-w-0">
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${isExpired ? 'bg-error-container text-error' : 'bg-primary-container/20 text-primary'}`}>
+              <span className="material-symbols-outlined text-[20px] sm:text-[24px]">sports_esports</span>
             </div>
-            <div>
-              <div className="flex items-center gap-space-sm">
-                <h2 className="font-headline-lg text-headline-lg text-on-surface">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-space-sm">
+                <h2 className="font-headline-lg text-base sm:text-headline-lg text-on-surface truncate">
                   {device.name} ({device.type}{device.isVIP ? ' VIP' : ''})
                 </h2>
                 {isExpired ? (
-                  <span className="inline-flex items-center gap-1 bg-error-container/40 text-error px-space-sm py-0.5 rounded-full font-label-sm text-label-sm font-bold animate-pulse">
-                    <span className="material-symbols-outlined text-[14px]">alarm</span>
-                    <span>{isEn ? 'Time Expired!' : 'انتهى الوقت المحدد!'}</span>
+                  <span className="inline-flex items-center gap-1 bg-error-container/40 text-error px-2 sm:px-space-sm py-0.5 rounded-full font-label-sm text-[11px] sm:text-label-sm font-bold animate-pulse shrink-0">
+                    <span className="material-symbols-outlined text-[13px] sm:text-[14px]">alarm</span>
+                    <span>{isEn ? 'Time Expired!' : 'انتهى الوقت!'}</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 bg-tertiary-container/20 text-tertiary px-space-sm py-0.5 rounded-full font-label-sm text-label-sm font-bold">
+                  <span className="inline-flex items-center gap-1 bg-tertiary-container/20 text-tertiary px-2 sm:px-space-sm py-0.5 rounded-full font-label-sm text-[11px] sm:text-label-sm font-bold shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
                     <span>{isEn ? 'Active' : 'شغال'}</span>
                   </span>
                 )}
               </div>
-              <span className="font-body-sm text-body-sm text-on-surface-variant">
+              <span className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant truncate block">
                 {device.session.mode === 'single' ? singleLabel : multiLabel} •{' '}
                 {isFixed
                   ? (isEn ? `Fixed (${device.session.targetMinutes} min)` : `نظام محدد (${device.session.targetMinutes} دقيقة)`)
@@ -148,14 +148,14 @@ export default function SessionModal({ deviceId, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-surface-container-highest hover:bg-error-container hover:text-on-error-container text-on-surface-variant flex items-center justify-center transition-all cursor-pointer"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest hover:bg-error-container hover:text-on-error-container text-on-surface-variant flex items-center justify-center transition-all cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">close</span>
           </button>
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div className="p-space-xl overflow-y-auto flex flex-col gap-space-lg">
+        <div className="p-3.5 sm:p-space-xl overflow-y-auto flex flex-col gap-3 sm:gap-space-lg">
           {/* Section 1: Timer & Progress */}
           <section className={`rounded-xl p-space-md shadow-sm border ${isExpired ? 'bg-error-container/10 border-error/40' : 'bg-surface-container-low border-outline-variant/20'}`}>
             <div className="flex items-center justify-between mb-space-sm">
@@ -373,22 +373,22 @@ export default function SessionModal({ deviceId, onClose }) {
           </section>
 
           {/* Section 3: Grand Total */}
-          <section className="bg-surface-container-highest/90 rounded-2xl p-space-lg shadow-inner flex flex-col sm:flex-row items-center justify-between gap-space-md border border-outline-variant/30">
+          <section className="bg-surface-container-highest/90 rounded-2xl p-3.5 sm:p-space-lg shadow-inner flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-space-md border border-outline-variant/30">
             <div className="flex flex-col text-center sm:text-start">
-              <span className="font-label-lg text-label-lg text-on-surface-variant">
+              <span className="font-label-lg text-xs sm:text-label-lg text-on-surface-variant">
                 {isEn ? 'Total Amount Due:' : 'المبلغ الإجمالي المستحق:'}
               </span>
-              <span className="font-body-sm text-body-sm text-outline mt-0.5">
+              <span className="font-body-sm text-xs sm:text-body-sm text-outline mt-0.5">
                 {isEn
                   ? `Time: ${timeCost} ${currencyStr} + Orders: ${ordersCost} ${currencyStr}`
-                  : `الوقت: ${timeCost} ج.م + الطلبات: ${ordersCost} ج.م`}
+                  : `الوقت: ${timeCost} ${currencyStr} + الطلبات: ${ordersCost} ${currencyStr}`}
               </span>
             </div>
             <div className="flex items-baseline gap-space-xs text-left dir-ltr">
-              <span className="font-display-lg text-display-lg text-secondary font-extrabold tracking-tight">
+              <span className="font-display-lg text-2xl sm:text-display-lg text-secondary font-extrabold tracking-tight">
                 {total}
               </span>
-              <span className="font-headline-lg text-headline-lg text-on-surface">
+              <span className="font-headline-lg text-base sm:text-headline-lg text-on-surface">
                 {currencyStr}
               </span>
             </div>
@@ -396,24 +396,24 @@ export default function SessionModal({ deviceId, onClose }) {
         </div>
 
         {/* ── Footer Actions ── */}
-        <div className="bg-surface-container-high p-space-md px-space-xl flex flex-col sm:flex-row items-center gap-space-sm shrink-0 border-t border-outline-variant/20">
+        <div className="bg-surface-container-high p-3 px-4 sm:p-space-md sm:px-space-xl flex flex-col sm:flex-row items-center gap-2 sm:gap-space-sm shrink-0 border-t border-outline-variant/20">
           {confirmEnd ? (
             <>
-              <p className="font-label-md text-label-md text-tertiary flex-1">
+              <p className="font-label-md text-xs sm:text-label-md text-tertiary flex-1 text-center sm:text-start">
                 {isEn
                   ? `Confirm checkout and record ${total} ${currencyStr}?`
-                  : `هل متأكد من إنهاء الجلسة وتسجيل ${total} ج.م؟`}
+                  : `هل متأكد من إنهاء الجلسة وتسجيل ${total} ${currencyStr}؟`}
               </p>
               <button
                 onClick={handleEndSession}
-                className="w-full sm:w-auto px-space-lg h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all transform active:scale-95 font-bold cursor-pointer"
+                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all transform active:scale-95 font-bold cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[22px]">check_circle</span>
+                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">check_circle</span>
                 <span>{isEn ? 'Confirm Checkout' : 'تأكيد الإنهاء'}</span>
               </button>
               <button
                 onClick={() => setConfirmEnd(false)}
-                className="w-full sm:w-auto px-space-lg h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
+                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
               >
                 {isEn ? 'Cancel' : 'إلغاء'}
               </button>
@@ -422,21 +422,21 @@ export default function SessionModal({ deviceId, onClose }) {
             <>
               <button
                 onClick={() => setConfirmEnd(true)}
-                className="w-full sm:flex-1 h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-sm transition-all transform active:scale-95 shadow-md font-bold cursor-pointer"
+                className="w-full sm:flex-1 h-12 sm:h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-sm transition-all transform active:scale-95 shadow-md font-bold cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[22px]">point_of_sale</span>
+                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">point_of_sale</span>
                 <span>{isEn ? 'End Session & Checkout' : 'إنهاء الجلسة والحساب'}</span>
               </button>
               <button
                 onClick={() => setShowAddOrder(true)}
-                className="w-full sm:w-auto px-space-lg h-14 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-md cursor-pointer"
+                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-md cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[20px]">local_bar</span>
+                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">local_bar</span>
                 <span>{isEn ? 'Add Order' : 'أضف طلب'}</span>
               </button>
               <button
                 onClick={onClose}
-                className="w-full sm:w-auto px-space-lg h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
+                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
               >
                 {isEn ? 'Close' : 'إغلاق'}
               </button>

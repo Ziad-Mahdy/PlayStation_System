@@ -60,23 +60,23 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
   return (
     <>
       <div
-        className="fixed inset-0 z-[110] flex items-center justify-center p-space-md bg-surface-container-lowest/80 backdrop-blur-md overflow-y-auto"
+        className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-space-md bg-surface-container-lowest/80 backdrop-blur-md overflow-y-auto"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="relative w-full max-w-4xl bg-surface-container rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden my-auto border border-outline-variant/30 flex flex-col max-h-[90vh]">
+        <div className="relative w-full max-w-4xl bg-surface-container rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden my-auto border border-outline-variant/30 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
           {/* Header */}
-          <div className="bg-surface-container-high px-space-xl py-space-md flex items-center justify-between border-b border-outline-variant/20 shrink-0">
-            <div className="flex items-center gap-space-sm">
-              <div className="w-11 h-11 rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[26px]">account_balance_wallet</span>
+          <div className="bg-surface-container-high px-4 sm:px-space-xl py-3 sm:py-space-md flex items-center justify-between border-b border-outline-variant/20 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-space-sm min-w-0">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[20px] sm:text-[26px]">account_balance_wallet</span>
               </div>
-              <div>
-                <h2 className="font-headline-md text-headline-md text-on-surface">
+              <div className="min-w-0">
+                <h2 className="font-headline-md text-base sm:text-headline-md text-on-surface truncate">
                   {t('worker_title')}
                 </h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant truncate">
                   {t('worker_subtitle')}
                 </p>
               </div>
@@ -84,46 +84,46 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
 
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
 
           {/* Quick Summary Badges */}
-          <div className="p-space-lg pb-0 shrink-0">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-sm">
-              <div className="bg-surface-container-low p-space-md rounded-2xl border border-secondary/30">
-                <span className="text-xs text-on-surface-variant block">{t('worker_stat_total')}</span>
-                <span className="font-headline-lg text-headline-lg text-secondary font-black">
-                  {totals.total} <span className="text-xs font-normal">{t('card_egp')}</span>
+          <div className="p-3 sm:p-space-lg pb-0 shrink-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-space-sm">
+              <div className="bg-surface-container-low p-2.5 sm:p-space-md rounded-xl sm:rounded-2xl border border-secondary/30">
+                <span className="text-[11px] sm:text-xs text-on-surface-variant block">{t('worker_stat_total')}</span>
+                <span className="font-headline-lg text-base sm:text-headline-lg text-secondary font-black">
+                  {totals.total} <span className="text-[10px] sm:text-xs font-normal">{t('card_egp')}</span>
                 </span>
               </div>
 
-              <div className="bg-surface-container-low p-space-md rounded-2xl border border-primary/30">
-                <span className="text-xs text-on-surface-variant block">{t('worker_stat_time')}</span>
-                <span className="font-headline-lg text-headline-lg text-primary font-bold">
-                  {totals.time} <span className="text-xs font-normal">{t('card_egp')}</span>
+              <div className="bg-surface-container-low p-2.5 sm:p-space-md rounded-xl sm:rounded-2xl border border-primary/30">
+                <span className="text-[11px] sm:text-xs text-on-surface-variant block">{t('worker_stat_time')}</span>
+                <span className="font-headline-lg text-base sm:text-headline-lg text-primary font-bold">
+                  {totals.time} <span className="text-[10px] sm:text-xs font-normal">{t('card_egp')}</span>
                 </span>
               </div>
 
-              <div className="bg-surface-container-low p-space-md rounded-2xl border border-tertiary/30">
-                <span className="text-xs text-on-surface-variant block">{t('worker_stat_orders')}</span>
-                <span className="font-headline-lg text-headline-lg text-tertiary font-bold">
-                  {totals.orders} <span className="text-xs font-normal">{t('card_egp')}</span>
+              <div className="bg-surface-container-low p-2.5 sm:p-space-md rounded-xl sm:rounded-2xl border border-tertiary/30">
+                <span className="text-[11px] sm:text-xs text-on-surface-variant block">{t('worker_stat_orders')}</span>
+                <span className="font-headline-lg text-base sm:text-headline-lg text-tertiary font-bold">
+                  {totals.orders} <span className="text-[10px] sm:text-xs font-normal">{t('card_egp')}</span>
                 </span>
               </div>
 
-              <div className="bg-surface-container-low p-space-md rounded-2xl border border-outline-variant/30">
-                <span className="text-xs text-on-surface-variant block">{t('worker_stat_count')}</span>
-                <span className="font-headline-lg text-headline-lg text-on-surface font-bold">
-                  {totals.count} <span className="text-xs font-normal">{t('worker_invoices_unit')}</span>
+              <div className="bg-surface-container-low p-2.5 sm:p-space-md rounded-xl sm:rounded-2xl border border-outline-variant/30">
+                <span className="text-[11px] sm:text-xs text-on-surface-variant block">{t('worker_stat_count')}</span>
+                <span className="font-headline-lg text-base sm:text-headline-lg text-on-surface font-bold">
+                  {totals.count} <span className="text-[10px] sm:text-xs font-normal">{t('worker_invoices_unit')}</span>
                 </span>
               </div>
             </div>
 
             {/* Search Box */}
-            <div className="mt-space-md flex items-center justify-between gap-space-sm">
+            <div className="mt-2.5 sm:mt-space-md flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-space-sm">
               <div className="relative flex-1">
                 <input
                   type="text"
@@ -133,43 +133,43 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                     setCurrentPage(1);
                   }}
                   placeholder={t('worker_search_placeholder')}
-                  className="w-full h-10 bg-surface-container-low rounded-xl ps-9 pe-3 text-xs font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
+                  className="w-full h-9 sm:h-10 bg-surface-container-low rounded-xl ps-9 pe-3 text-xs font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
                 />
                 <span className="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
                   search
                 </span>
               </div>
-              <span className="text-xs text-outline shrink-0">
+              <span className="text-[11px] sm:text-xs text-outline shrink-0">
                 {t('worker_page_hint')}
               </span>
             </div>
           </div>
 
           {/* Invoices List / Table */}
-          <div className="p-space-lg flex-1 overflow-y-auto">
+          <div className="p-3 sm:p-space-lg flex-1 overflow-y-auto">
             {filteredInvoices.length === 0 ? (
-              <div className="text-center py-12 text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/20">
-                <span className="material-symbols-outlined text-[44px] text-outline mb-1">
+              <div className="text-center py-10 sm:py-12 text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/20">
+                <span className="material-symbols-outlined text-[36px] sm:text-[44px] text-outline mb-1">
                   receipt
                 </span>
-                <p className="font-headline-sm text-headline-sm">{t('worker_no_invoices')}</p>
-                <p className="font-body-sm text-body-sm text-outline mt-0.5">
+                <p className="font-headline-sm text-sm sm:text-headline-sm">{t('worker_no_invoices')}</p>
+                <p className="font-body-sm text-xs sm:text-body-sm text-outline mt-0.5">
                   {t('worker_no_invoices_hint')}
                 </p>
               </div>
             ) : (
-              <div className="bg-surface-container-low rounded-2xl border border-outline-variant/30 overflow-hidden shadow-sm">
-                <table className="w-full text-start border-collapse text-xs sm:text-sm">
+              <div className="overflow-x-auto bg-surface-container-low rounded-xl sm:rounded-2xl border border-outline-variant/30 shadow-sm">
+                <table className="w-full min-w-[620px] text-start border-collapse text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-surface-container border-b border-outline-variant/20 text-on-surface-variant font-label-md">
-                      <th className="p-3">{t('worker_th_num')}</th>
-                      <th className="p-3">{t('worker_th_device')}</th>
-                      <th className="p-3">{t('worker_th_datetime')}</th>
-                      <th className="p-3">{t('worker_th_duration')}</th>
-                      <th className="p-3">{t('worker_th_time')}</th>
-                      <th className="p-3">{t('worker_th_orders')}</th>
-                      <th className="p-3">{t('worker_th_total')}</th>
-                      <th className="p-3 text-center">{t('worker_th_action')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_num')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_device')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_datetime')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_duration')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_time')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_orders')}</th>
+                      <th className="p-2.5 sm:p-3">{t('worker_th_total')}</th>
+                      <th className="p-2.5 sm:p-3 text-center">{t('worker_th_action')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10 font-body-sm">
@@ -187,8 +187,8 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
 
                       return (
                         <tr key={inv.id || idx} className="hover:bg-surface-container/60 transition-colors">
-                          <td className="p-3 text-outline font-mono">{inv.id ? `#${inv.id}` : startIndex + idx + 1}</td>
-                          <td className="p-3 font-bold text-on-surface">
+                          <td className="p-2.5 sm:p-3 text-outline font-mono">{inv.id ? `#${inv.id}` : startIndex + idx + 1}</td>
+                          <td className="p-2.5 sm:p-3 font-bold text-on-surface">
                             {inv.deviceName}
                             {inv.customerName && (
                               <span className="block text-[11px] text-secondary font-medium">
@@ -199,27 +199,27 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                               {inv.mode === 'single' ? t('worker_single') : t('worker_multi')}
                             </span>
                           </td>
-                          <td className="p-3 text-on-surface">
+                          <td className="p-2.5 sm:p-3 text-on-surface">
                             <span className="font-bold block">{timeStr}</span>
                             <span className="text-[11px] text-outline">{dateStr}</span>
                           </td>
-                          <td className="p-3 font-mono text-outline font-medium">
+                          <td className="p-2.5 sm:p-3 font-mono text-outline font-medium">
                             {formatTime(inv.durationSeconds || 0)}
                           </td>
-                          <td className="p-3 text-primary font-bold">
+                          <td className="p-2.5 sm:p-3 text-primary font-bold">
                             {inv.timeCost?.toFixed(2)} {t('card_egp')}
                           </td>
-                          <td className="p-3 text-tertiary font-bold">
+                          <td className="p-2.5 sm:p-3 text-tertiary font-bold">
                             {inv.ordersCost?.toFixed(2)} {t('card_egp')}
                           </td>
-                          <td className="p-3 text-secondary font-black font-headline-sm">
+                          <td className="p-2.5 sm:p-3 text-secondary font-black font-headline-sm">
                             {inv.total?.toFixed(2)} {t('card_egp')}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-2.5 sm:p-3 text-center">
                             <button
                               type="button"
                               onClick={() => setPreviewInvoice(inv)}
-                              className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm rounded-lg transition-colors inline-flex items-center gap-1"
+                              className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
                               title={t('worker_view_title')}
                             >
                               <span className="material-symbols-outlined text-[16px]">visibility</span>
@@ -237,7 +237,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="bg-surface-container-high px-space-lg py-3 flex items-center justify-between border-t border-outline-variant/20 shrink-0">
+            <div className="bg-surface-container-high px-3 sm:px-space-lg py-2.5 sm:py-3 flex flex-col xs:flex-row items-center justify-between gap-2 border-t border-outline-variant/20 shrink-0">
               <span className="text-xs text-on-surface-variant font-label-sm">
                 {t('worker_page_of', validPage, totalPages, filteredInvoices.length)}
               </span>
@@ -247,7 +247,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                   type="button"
                   disabled={validPage === 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="h-8 px-3 rounded-lg text-xs bg-surface-container text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1"
+                  className="h-8 px-2.5 sm:px-3 rounded-lg text-xs bg-surface-container text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1 cursor-pointer"
                 >
                   <span>{t('worker_prev')}</span>
                 </button>
@@ -257,7 +257,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                     key={i + 1}
                     type="button"
                     onClick={() => setCurrentPage(i + 1)}
-                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       validPage === i + 1
                         ? 'bg-primary-container text-on-primary-container shadow-sm'
                         : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-highest'
@@ -271,7 +271,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                   type="button"
                   disabled={validPage === totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="h-8 px-3 rounded-lg text-xs bg-surface-container text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1"
+                  className="h-8 px-2.5 sm:px-3 rounded-lg text-xs bg-surface-container text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1 cursor-pointer"
                 >
                   <span>{t('worker_next')}</span>
                 </button>

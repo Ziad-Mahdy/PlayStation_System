@@ -216,34 +216,34 @@ export default function DeveloperPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface p-6 max-w-[1600px] mx-auto flex flex-col gap-6">
+    <div className="min-h-screen bg-surface text-on-surface p-3 sm:p-6 max-w-[1600px] mx-auto flex flex-col gap-3 sm:gap-6">
       {/* ── Top Bar ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container-low p-6 rounded-3xl border border-outline-variant/30 shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-md">
-            <span className="material-symbols-outlined text-[28px]">terminal</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-surface-container-low p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-outline-variant/30 shadow-lg">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-md shrink-0">
+            <span className="material-symbols-outlined text-[24px] sm:text-[28px]">terminal</span>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-headline-lg text-headline-lg text-primary">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-headline-lg text-lg sm:text-headline-lg text-primary">
                 لوحة تحكم المطور المركزية
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-primary/10 text-primary border border-primary/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-mono bg-primary/10 text-primary border border-primary/30">
                 Developer Panel
               </span>
             </div>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-0.5">
+            <p className="font-body-md text-xs sm:text-body-md text-on-surface-variant mt-0.5">
               إدارة المشتركين، توليد وتفعيل الأكواد، وتمديد وإيقاف الاشتراكات
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => navigate('/')}
-            className="h-11 px-4 rounded-xl bg-surface-container text-on-surface font-label-md flex items-center gap-2 hover:bg-surface-container-highest transition-all cursor-pointer"
+            className="flex-1 sm:flex-initial h-10 sm:h-11 px-3 sm:px-4 rounded-xl bg-surface-container text-on-surface font-label-md text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-surface-container-highest transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">storefront</span>
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">storefront</span>
             <span>معاينة السيستم</span>
           </button>
 
@@ -252,39 +252,39 @@ export default function DeveloperPanel() {
               logoutDev();
               navigate('/login');
             }}
-            className="h-11 px-4 rounded-xl bg-error/15 text-error font-label-md flex items-center gap-2 hover:bg-error/25 border border-error/30 transition-all cursor-pointer"
+            className="flex-1 sm:flex-initial h-10 sm:h-11 px-3 sm:px-4 rounded-xl bg-error/15 text-error font-label-md text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-error/25 border border-error/30 transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">logout</span>
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">logout</span>
             <span>خروج المطور</span>
           </button>
         </div>
       </div>
 
       {/* ── Statistics Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/20 flex flex-col gap-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-4">
+        <div className="bg-surface-container-low p-3 sm:p-5 rounded-2xl border border-outline-variant/20 flex flex-col gap-1">
           <span className="text-xs text-on-surface-variant font-medium">إجمالي المشتركين</span>
-          <span className="text-3xl font-extrabold text-on-surface font-mono">{stats.total}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-on-surface font-mono">{stats.total}</span>
         </div>
 
-        <div className="bg-surface-container-low p-5 rounded-2xl border border-emerald-500/20 flex flex-col gap-1">
+        <div className="bg-surface-container-low p-3 sm:p-5 rounded-2xl border border-emerald-500/20 flex flex-col gap-1">
           <span className="text-xs text-emerald-400 font-medium">نشط وشغال</span>
-          <span className="text-3xl font-extrabold text-emerald-400 font-mono">{stats.active}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">{stats.active}</span>
         </div>
 
-        <div className="bg-surface-container-low p-5 rounded-2xl border border-amber-500/20 flex flex-col gap-1">
+        <div className="bg-surface-container-low p-3 sm:p-5 rounded-2xl border border-amber-500/20 flex flex-col gap-1">
           <span className="text-xs text-amber-400 font-medium">جديد في انتظار التفعيل</span>
-          <span className="text-3xl font-extrabold text-amber-400 font-mono">{stats.pending}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono">{stats.pending}</span>
         </div>
 
-        <div className="bg-surface-container-low p-5 rounded-2xl border border-rose-500/20 flex flex-col gap-1">
+        <div className="bg-surface-container-low p-3 sm:p-5 rounded-2xl border border-rose-500/20 flex flex-col gap-1">
           <span className="text-xs text-rose-400 font-medium">منتهي الصلاحية</span>
-          <span className="text-3xl font-extrabold text-rose-400 font-mono">{stats.expired}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-rose-400 font-mono">{stats.expired}</span>
         </div>
 
-        <div className="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/20 flex flex-col gap-1">
+        <div className="bg-surface-container-low p-3 sm:p-5 rounded-2xl border border-outline-variant/20 flex flex-col gap-1 col-span-2 sm:col-span-1">
           <span className="text-xs text-on-surface-variant font-medium">موقوف مؤقتاً</span>
-          <span className="text-3xl font-extrabold text-zinc-400 font-mono">{stats.suspended}</span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-zinc-400 font-mono">{stats.suspended}</span>
         </div>
       </div>
 
@@ -357,8 +357,8 @@ export default function DeveloperPanel() {
             <p className="font-headline-sm">لا يوجد مشتركين مطابقين للبحث</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-right border-collapse min-w-[760px]">
               <thead>
                 <tr className="bg-surface-container/60 border-b border-outline-variant/20 text-xs text-on-surface-variant font-label-lg">
                   <th className="py-4 px-5">العميل والمحل</th>

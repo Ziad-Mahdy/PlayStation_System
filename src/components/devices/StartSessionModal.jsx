@@ -58,7 +58,7 @@ export default function StartSessionModal({ deviceId, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-space-md bg-surface-container-lowest/80 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-space-md bg-surface-container-lowest/80 backdrop-blur-md overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -67,35 +67,35 @@ export default function StartSessionModal({ deviceId, onClose }) {
         <div className="h-1.5 w-full bg-secondary-container"></div>
 
         {/* Header */}
-        <div className="px-space-xl pt-space-xl pb-space-md flex items-center justify-between border-b border-outline-variant/20">
-          <div className="flex items-center gap-space-md">
-            <div className="w-12 h-12 rounded-xl bg-secondary-container/20 flex items-center justify-center text-secondary">
+        <div className="px-4 pt-4 pb-3 sm:px-space-xl sm:pt-space-xl sm:pb-space-md flex items-center justify-between border-b border-outline-variant/20">
+          <div className="flex items-center gap-2 sm:gap-space-md min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-secondary-container/20 flex items-center justify-center text-secondary shrink-0">
               <span
-                className="material-symbols-outlined text-[28px]"
+                className="material-symbols-outlined text-[24px] sm:text-[28px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 play_circle
               </span>
             </div>
-            <div>
-              <h2 className="font-headline-md text-headline-md text-on-surface">
+            <div className="min-w-0">
+              <h2 className="font-headline-md text-base sm:text-headline-md text-on-surface truncate">
                 {isEn ? 'Start New Session' : 'بدء جلسة جديدة'}
               </h2>
-              <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant mt-0.5 truncate">
                 {device.name} • {device.type}{device.isVIP ? ' VIP' : ''}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* Body content */}
-        <div className="p-space-xl flex flex-col gap-space-lg max-h-[75vh] overflow-y-auto">
+        <div className="p-3.5 sm:p-space-xl flex flex-col gap-3 sm:gap-space-lg max-h-[75vh] overflow-y-auto">
           {/* 1. Mode Selection (Single vs Multi) */}
           <div className="flex flex-col gap-space-xs">
             <p className="font-label-lg text-label-lg text-on-surface">
@@ -289,7 +289,7 @@ export default function StartSessionModal({ deviceId, onClose }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-surface-container-high p-space-md px-space-xl flex gap-space-sm border-t border-outline-variant/20">
+        <div className="bg-surface-container-high p-3 px-4 sm:p-space-md sm:px-space-xl flex gap-space-sm border-t border-outline-variant/20">
           <button
             type="button"
             onClick={onClose}

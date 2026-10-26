@@ -14,7 +14,7 @@ export default function MainLayout() {
       className="min-h-screen flex flex-col bg-surface"
     >
       <Header />
-      <main className="w-full pt-20 flex-1 bg-surface">
+      <main className="w-full pt-16 sm:pt-20 flex-1 bg-surface">
         <Outlet />
       </main>
     </div>

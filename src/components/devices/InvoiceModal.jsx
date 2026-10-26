@@ -41,30 +41,30 @@ export default function InvoiceModal({ invoice, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center p-space-md bg-surface-container-lowest/85 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-space-md bg-surface-container-lowest/85 backdrop-blur-md overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-md bg-surface-container rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden my-auto border border-outline-variant/40 flex flex-col">
+      <div className="relative w-full max-w-md bg-surface-container rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden my-auto border border-outline-variant/40 flex flex-col">
         {/* Receipt Top Header */}
-        <div className="bg-surface-container-high p-space-lg text-center border-b border-dashed border-outline-variant/40 relative">
+        <div className="bg-surface-container-high p-4 sm:p-space-lg text-center border-b border-dashed border-outline-variant/40 relative">
           {/* Close button top corner */}
           <button
             onClick={onClose}
-            className="absolute top-4 start-4 w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+            className="absolute top-3.5 start-3.5 w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
 
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center mb-2">
-            <span className="material-symbols-outlined text-[28px]">receipt_long</span>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center mb-2">
+            <span className="material-symbols-outlined text-[24px] sm:text-[28px]">receipt_long</span>
           </div>
 
-          <h2 className="font-headline-lg text-headline-lg text-on-surface">
+          <h2 className="font-headline-lg text-base sm:text-headline-lg text-on-surface">
             {isEn ? 'Receipt - PlayStation Cafe' : 'فاتورة حساب - بلايستيشن كافيه'}
           </h2>
-          <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+          <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant mt-0.5">
             {isEn ? 'Official Customer Receipt' : 'إيصال دفع رسمي للزبون'}
           </p>
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-outline font-mono">
@@ -75,7 +75,7 @@ export default function InvoiceModal({ invoice, onClose }) {
         </div>
 
         {/* Receipt Printable Card Area */}
-        <div id="printable-receipt" className="p-space-lg flex flex-col gap-space-md overflow-y-auto max-h-[60vh]">
+        <div id="printable-receipt" className="p-3.5 sm:p-space-lg flex flex-col gap-3 sm:gap-space-md overflow-y-auto max-h-[60vh]">
           {/* Device & Mode Information */}
           <div className="bg-surface-container-lowest p-space-md rounded-2xl border border-outline-variant/20 flex items-center justify-between">
             <div className="flex items-center gap-space-sm">

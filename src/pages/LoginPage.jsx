@@ -63,17 +63,17 @@ export default function LoginPage() {
       key={language}
       dir={isEn ? 'ltr' : 'rtl'}
       lang={language}
-      className="min-h-screen bg-surface flex flex-col justify-center items-center p-4 relative overflow-hidden"
+      className="min-h-screen bg-surface flex flex-col justify-center items-center p-3 sm:p-4 relative overflow-hidden"
     >
       {/* Top Language Switcher */}
-      <div className="absolute top-6 end-6 z-20">
+      <div className="absolute top-3 end-3 sm:top-6 sm:end-6 z-20">
         <button
           type="button"
           onClick={toggleLanguage}
           title={isEn ? 'التحويل إلى العربية' : 'Switch to English'}
-          className="h-10 px-3.5 rounded-2xl bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface border border-outline-variant/30 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-md cursor-pointer backdrop-blur-md"
+          className="h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-2xl bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface border border-outline-variant/30 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-md cursor-pointer backdrop-blur-md"
         >
-          <span className="material-symbols-outlined text-[18px] text-primary">translate</span>
+          <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-primary">translate</span>
           <span>{isEn ? 'العربية' : 'English'}</span>
         </button>
       </div>
@@ -83,31 +83,31 @@ export default function LoginPage() {
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Login Card */}
-      <div className="w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-3xl p-8 shadow-2xl relative z-10 backdrop-blur-xl">
+      <div className="w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-3xl p-5 sm:p-8 shadow-2xl relative z-10 backdrop-blur-xl">
         {/* Brand Header */}
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-lg mb-4 ring-1 ring-primary/30">
+        <div className="flex flex-col items-center text-center mb-5 sm:mb-8">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-lg mb-3 sm:mb-4 ring-1 ring-primary/30">
             <span
-              className="material-symbols-outlined text-[36px]"
+              className="material-symbols-outlined text-[30px] sm:text-[36px]"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               sports_esports
             </span>
           </div>
-          <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight">
+          <h1 className="font-headline-lg text-2xl sm:text-headline-lg text-primary tracking-tight">
             {t('login_title')}
           </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+          <p className="font-body-md text-xs sm:text-body-md text-on-surface-variant mt-1">
             {t('login_subtitle')}
           </p>
         </div>
 
         {/* Client Login Form */}
-        <form onSubmit={handleClientSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleClientSubmit} className="flex flex-col gap-4 sm:gap-5">
           {/* Phone Field */}
           <div className="flex flex-col gap-1.5">
-            <label className="font-label-md text-label-md text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-primary">phone_iphone</span>
+            <label className="font-label-md text-xs sm:text-label-md text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-primary">phone_iphone</span>
               {t('login_phone_label')}
             </label>
             <input
@@ -115,15 +115,15 @@ export default function LoginPage() {
               placeholder="010xxxxxxxx"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-left dir-ltr placeholder:text-outline/50 transition-all font-mono text-base"
+              className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-left dir-ltr placeholder:text-outline/50 transition-all font-mono text-sm sm:text-base"
               required
             />
           </div>
 
           {/* Subscription Code Field */}
           <div className="flex flex-col gap-1.5">
-            <label className="font-label-md text-label-md text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-primary">key</span>
+            <label className="font-label-md text-xs sm:text-label-md text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-primary">key</span>
               {t('login_code_label')}
             </label>
             <input
@@ -131,10 +131,10 @@ export default function LoginPage() {
               placeholder="PS-XXXX-XXXX"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-center uppercase tracking-widest placeholder:tracking-normal placeholder:text-outline/50 transition-all font-mono font-bold text-base"
+              className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-center uppercase tracking-widest placeholder:tracking-normal placeholder:text-outline/50 transition-all font-mono font-bold text-sm sm:text-base"
               required
             />
-            <p className="text-[12px] text-on-surface-variant/80 mt-0.5">
+            <p className="text-[11px] sm:text-[12px] text-on-surface-variant/80 mt-0.5">
               {t('login_code_hint')}
             </p>
           </div>
@@ -143,7 +143,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isClientLoading}
-            className="mt-2 h-12 w-full rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-primary/25 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-60 cursor-pointer"
+            className="mt-1 sm:mt-2 h-11 sm:h-12 w-full rounded-xl bg-primary text-on-primary font-headline-sm text-sm sm:text-headline-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-primary/25 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-60 cursor-pointer"
           >
             {isClientLoading ? (
               <>
@@ -162,7 +162,7 @@ export default function LoginPage() {
         </form>
 
         {/* Divider & Developer Portal Trigger */}
-        <div className="mt-8 pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-2">
+        <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={() => setShowDevModal(true)}
@@ -176,12 +176,12 @@ export default function LoginPage() {
 
       {/* Developer Master Login Modal */}
       {showDevModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-surface-container-high border border-outline-variant/40 rounded-2xl p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-sm bg-surface-container-high border border-outline-variant/40 rounded-2xl p-4 sm:p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 text-primary">
                 <span className="material-symbols-outlined text-[24px]">shield_person</span>
-                <h3 className="font-headline-sm text-headline-sm">
+                <h3 className="font-headline-sm text-sm sm:text-headline-sm">
                   {isEn ? 'Developer Login' : 'دخول المطور'}
                 </h3>
               </div>
@@ -208,7 +208,7 @@ export default function LoginPage() {
                   placeholder="Developer Master Password"
                   value={devPassword}
                   onChange={(e) => setDevPassword(e.target.value)}
-                  className="h-11 px-3 rounded-xl bg-surface-container border border-outline-variant/50 text-on-surface focus:outline-none focus:border-primary text-center font-mono"
+                  className="h-10 sm:h-11 px-3 rounded-xl bg-surface-container border border-outline-variant/50 text-on-surface focus:outline-none focus:border-primary text-center font-mono text-sm"
                   required
                 />
                 {devError && <p className="text-xs text-error mt-1">{devError}</p>}
@@ -218,13 +218,13 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowDevModal(false)}
-                  className="flex-1 h-10 rounded-xl bg-surface-container text-on-surface-variant font-label-md hover:bg-surface-container-highest transition-all"
+                  className="flex-1 h-10 rounded-xl bg-surface-container text-on-surface-variant font-label-md text-xs sm:text-sm hover:bg-surface-container-highest transition-all"
                 >
                   {isEn ? 'Cancel' : 'إلغاء'}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 h-10 rounded-xl bg-primary text-on-primary font-label-md hover:brightness-110 transition-all"
+                  className="flex-1 h-10 rounded-xl bg-primary text-on-primary font-label-md text-xs sm:text-sm hover:brightness-110 transition-all"
                 >
                   {isEn ? 'Login' : 'دخول'}
                 </button>

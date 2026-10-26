@@ -147,25 +147,25 @@ export default function Header() {
   return (
     <>
       <header className="fixed top-0 w-full z-50 bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)] border-b border-outline-variant/15">
-        <div className="h-20 w-full px-margin flex items-center justify-between gap-space-md">
+        <div className="h-16 sm:h-20 w-full px-2.5 sm:px-4 md:px-margin flex items-center justify-between gap-1.5 sm:gap-space-md">
 
           {/* ── Logo & Title ── */}
-          <div className="flex items-center gap-space-md">
-            <div className="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center shrink-0 shadow-sm">
-              <span className="material-symbols-outlined text-on-primary-container text-[22px]"
+          <div className="flex items-center gap-2 sm:gap-space-md min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary-container flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-on-primary-container text-[20px] sm:text-[22px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}>
                 sports_esports
               </span>
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-headline-sm text-sm sm:text-headline-sm text-primary tracking-tight truncate max-w-[110px] xs:max-w-[150px] sm:max-w-[220px] md:max-w-none">
                   {currentClient ? currentClient.shop_name : t('header_title_default')}
                 </span>
                 {/* Cloud Sync Status Badge */}
                 <span
                   title={isSupabaseConfigured ? t('header_cloud_tooltip') : t('header_local_tooltip')}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                  className={`hidden xs:inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium shrink-0 ${
                     isSupabaseConfigured
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                       : 'bg-zinc-700/40 text-zinc-400 border border-zinc-600/30'
@@ -175,11 +175,11 @@ export default function Header() {
                   {isSupabaseConfigured ? t('header_cloud') : t('header_local')}
                 </span>
               </div>
-              <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+              <span className="font-label-sm text-[11px] sm:text-label-sm text-on-surface-variant hidden sm:flex items-center gap-1 truncate max-w-[200px]">
                 {currentClient ? (
                   <>
                     <span>{t('header_client')}</span>
-                    <strong className="text-on-surface">{currentClient.client_name}</strong>
+                    <strong className="text-on-surface truncate">{currentClient.client_name}</strong>
                   </>
                 ) : (
                   t('header_subtitle')
@@ -189,7 +189,7 @@ export default function Header() {
           </div>
 
           {/* ── Center: Subscription Countdown & Live Clock ── */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             {currentClient && (
               <SubscriptionCountdown expiresAt={currentClient.expires_at} />
             )}
@@ -197,16 +197,16 @@ export default function Header() {
           </div>
 
           {/* ── Navigation Actions & Controls ── */}
-          <div className="flex items-center gap-space-sm">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* If Developer is logged in, show quick Dev Panel button */}
             {isDevLoggedIn && (
               <button
                 type="button"
                 onClick={() => navigate('/dev-panel')}
-                className="h-10 px-3 rounded-xl bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                className="h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">terminal</span>
-                <span className="hidden sm:inline">{t('header_dev_panel')}</span>
+                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">terminal</span>
+                <span className="hidden md:inline">{t('header_dev_panel')}</span>
               </button>
             )}
 
@@ -215,19 +215,20 @@ export default function Header() {
               type="button"
               onClick={toggleLanguage}
               title={language === 'ar' ? 'Switch to English' : 'التحويل إلى العربية'}
-              className="h-11 px-3 rounded-2xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant/30 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm cursor-pointer"
+              className="h-9 sm:h-11 px-2 sm:px-3 rounded-xl sm:rounded-2xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant/30 flex items-center justify-center gap-1 sm:gap-1.5 text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px] text-primary">translate</span>
-              <span>{t('header_switch_lang')}</span>
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-primary">translate</span>
+              <span className="hidden xs:inline text-xs">{t('header_switch_lang')}</span>
+              <span className="xs:hidden text-[11px] font-bold">{language === 'ar' ? 'EN' : 'عربي'}</span>
             </button>
 
-            <nav className="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-2xl border border-outline-variant/20 shadow-sm">
+            <nav className="flex items-center gap-0.5 sm:gap-space-xs bg-surface-container-low p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-outline-variant/20 shadow-sm">
               {/* Devices Tab */}
               <NavLink
                 to="/"
                 end
                 className={({ isActive }) =>
-                  `h-11 px-space-md flex items-center justify-center rounded-xl transition-all select-none font-headline-sm text-headline-sm ${
+                  `h-9 sm:h-11 px-2.5 sm:px-space-md flex items-center justify-center rounded-lg sm:rounded-xl transition-all select-none text-xs sm:text-headline-sm font-semibold ${
                     isActive
                       ? 'bg-primary-container text-on-primary-container shadow-sm'
                       : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
@@ -241,14 +242,14 @@ export default function Header() {
               <button
                 type="button"
                 onClick={handleAdminClick}
-                className={`h-11 px-space-md flex items-center justify-center rounded-xl transition-all select-none font-headline-sm text-headline-sm cursor-pointer ${
+                className={`h-9 sm:h-11 px-2.5 sm:px-space-md flex items-center justify-center rounded-lg sm:rounded-xl transition-all select-none text-xs sm:text-headline-sm font-semibold cursor-pointer ${
                   onAdminPage
                     ? 'bg-primary-container text-on-primary-container shadow-sm'
                     : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px]">
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
                     {onAdminPage && isAdmin ? 'shield_person' : 'lock'}
                   </span>
                   <span>{t('header_admin')}</span>
@@ -262,10 +263,10 @@ export default function Header() {
                 type="button"
                 onClick={handleLogout}
                 title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout from account'}
-                className="h-11 px-3 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 flex items-center justify-center gap-1 text-xs font-semibold transition-all cursor-pointer"
+                className="h-9 sm:h-11 px-2 sm:px-3 rounded-xl sm:rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 flex items-center justify-center gap-1 text-xs font-semibold transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-                <span className="hidden sm:inline">{t('header_logout')}</span>
+                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">logout</span>
+                <span className="hidden md:inline">{t('header_logout')}</span>
               </button>
             )}
           </div>

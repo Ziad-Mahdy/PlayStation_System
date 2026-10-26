@@ -63,54 +63,54 @@ export default function DevicesPage() {
   }, [devices, filterType, filterStatus, searchQuery]);
 
   return (
-    <div className="w-full px-margin py-space-lg flex flex-col gap-space-lg max-w-[1600px] mx-auto">
+    <div className="w-full px-2.5 sm:px-4 md:px-margin py-3 sm:py-space-lg flex flex-col gap-3 sm:gap-space-lg max-w-[1600px] mx-auto">
       {/* ── Top Bar: Title & Stats ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-2xl border border-outline-variant/30">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-space-md bg-surface-container-low p-3.5 sm:p-space-lg rounded-2xl border border-outline-variant/30 shadow-md">
         <div>
-          <h1 className="font-headline-xl text-headline-xl text-on-surface">
+          <h1 className="font-headline-xl text-xl sm:text-headline-xl text-on-surface">
             {t('devices_title')}
           </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+          <p className="font-body-md text-xs sm:text-body-md text-on-surface-variant mt-0.5 sm:mt-1">
             {t('devices_subtitle')}
           </p>
         </div>
 
         {/* Quick Stats Badges */}
-        <div className="flex items-center gap-space-sm flex-wrap">
-          <div className="flex items-center gap-space-xs bg-surface-container-high px-space-md py-space-sm rounded-xl border border-outline-variant/30">
-            <span className="font-label-md text-label-md text-on-surface-variant">{t('devices_stat_total')}</span>
-            <span className="font-headline-sm text-headline-sm text-primary font-bold">{stats.total}</span>
+        <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 sm:gap-space-sm w-full md:w-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-space-xs bg-surface-container-high px-2.5 sm:px-space-md py-2 sm:py-space-sm rounded-xl border border-outline-variant/30">
+            <span className="font-label-sm sm:font-label-md text-xs sm:text-label-md text-on-surface-variant">{t('devices_stat_total')}</span>
+            <span className="font-headline-sm text-sm sm:text-headline-sm text-primary font-bold">{stats.total}</span>
           </div>
-          <div className="flex items-center gap-space-xs bg-tertiary-container/20 text-tertiary px-space-md py-space-sm rounded-xl border border-tertiary-container/30">
-            <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse"></span>
-            <span className="font-label-md text-label-md">{t('devices_stat_busy')}</span>
-            <span className="font-headline-sm text-headline-sm font-bold">{stats.busy}</span>
+          <div className="flex items-center justify-between sm:justify-start gap-space-xs bg-tertiary-container/20 text-tertiary px-2.5 sm:px-space-md py-2 sm:py-space-sm rounded-xl border border-tertiary-container/30">
+            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse shrink-0"></span>
+            <span className="font-label-sm sm:font-label-md text-xs sm:text-label-md">{t('devices_stat_busy')}</span>
+            <span className="font-headline-sm text-sm sm:text-headline-sm font-bold">{stats.busy}</span>
           </div>
-          <div className="flex items-center gap-space-xs bg-secondary-container/20 text-secondary px-space-md py-space-sm rounded-xl border border-secondary-container/30">
-            <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-            <span className="font-label-md text-label-md">{t('devices_stat_free')}</span>
-            <span className="font-headline-sm text-headline-sm font-bold">{stats.free}</span>
+          <div className="flex items-center justify-between sm:justify-start gap-space-xs bg-secondary-container/20 text-secondary px-2.5 sm:px-space-md py-2 sm:py-space-sm rounded-xl border border-secondary-container/30">
+            <span className="w-2 h-2 rounded-full bg-secondary shrink-0"></span>
+            <span className="font-label-sm sm:font-label-md text-xs sm:text-label-md">{t('devices_stat_free')}</span>
+            <span className="font-headline-sm text-sm sm:text-headline-sm font-bold">{stats.free}</span>
           </div>
 
           {/* Quick Trigger to Worker Accounts */}
           <button
             type="button"
             onClick={() => setShowAccountsModal(true)}
-            className="h-11 px-space-md bg-surface-container-high hover:bg-surface-container-highest text-secondary border border-secondary/30 rounded-xl font-label-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            className="col-span-3 sm:col-span-1 h-10 sm:h-11 px-3 sm:px-space-md bg-surface-container-high hover:bg-surface-container-highest text-secondary border border-secondary/30 rounded-xl font-label-md sm:font-label-lg flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-            <span>{t('devices_worker_accounts')}</span>
+            <span className="text-xs sm:text-sm">{t('devices_worker_accounts')}</span>
           </button>
         </div>
       </div>
 
       {/* ── Filters & Search Controls ── */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-2xl border border-outline-variant/20 shadow-md">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-space-md bg-surface-container-lowest p-2.5 sm:p-space-md rounded-2xl border border-outline-variant/20 shadow-md">
         {/* Device Categories / Type Tabs */}
-        <div className="flex items-center gap-space-xs overflow-x-auto pb-1 lg:pb-0">
+        <div className="flex items-center gap-1.5 sm:gap-space-xs overflow-x-auto pb-1.5 lg:pb-0">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-space-md py-2.5 rounded-xl font-label-lg text-label-lg transition-all shrink-0 ${
+            className={`px-3 sm:px-space-md py-2 sm:py-2.5 rounded-xl font-label-md sm:font-label-lg text-xs sm:text-label-lg transition-all shrink-0 ${
               filterType === 'all'
                 ? 'bg-primary-container text-on-primary-container shadow-md'
                 : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
@@ -124,7 +124,7 @@ export default function DevicesPage() {
             <button
               key={cat}
               onClick={() => setFilterType(cat)}
-              className={`px-space-md py-2.5 rounded-xl font-label-lg text-label-lg transition-all shrink-0 ${
+              className={`px-3 sm:px-space-md py-2 sm:py-2.5 rounded-xl font-label-md sm:font-label-lg text-xs sm:text-label-lg transition-all shrink-0 ${
                 filterType === cat
                   ? 'bg-primary-container text-on-primary-container shadow-md'
                   : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
@@ -136,7 +136,7 @@ export default function DevicesPage() {
 
           <button
             onClick={() => setFilterType('vip')}
-            className={`px-space-md py-2.5 rounded-xl font-label-lg text-label-lg transition-all shrink-0 ${
+            className={`px-3 sm:px-space-md py-2 sm:py-2.5 rounded-xl font-label-md sm:font-label-lg text-xs sm:text-label-lg transition-all shrink-0 ${
               filterType === 'vip'
                 ? 'bg-primary-container text-on-primary-container shadow-md'
                 : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
@@ -147,12 +147,12 @@ export default function DevicesPage() {
         </div>
 
         {/* Right side: Status Filter & Search input */}
-        <div className="flex flex-col sm:flex-row items-center gap-space-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-space-sm">
           {/* Status selector */}
-          <div className="flex items-center gap-1 bg-surface-container p-1 rounded-xl w-full sm:w-auto">
+          <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-surface-container p-1 rounded-xl w-full sm:w-auto">
             <button
               onClick={() => setFilterStatus('all')}
-              className={`px-3 py-1.5 rounded-lg font-label-md text-label-md transition-all flex-1 sm:flex-initial text-center ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-label-md text-xs sm:text-label-md transition-all text-center ${
                 filterStatus === 'all'
                   ? 'bg-surface-container-highest text-on-surface font-bold'
                   : 'text-on-surface-variant hover:text-on-surface'
@@ -162,7 +162,7 @@ export default function DevicesPage() {
             </button>
             <button
               onClick={() => setFilterStatus('busy')}
-              className={`px-3 py-1.5 rounded-lg font-label-md text-label-md transition-all flex-1 sm:flex-initial text-center ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-label-md text-xs sm:text-label-md transition-all text-center ${
                 filterStatus === 'busy'
                   ? 'bg-tertiary-container/30 text-tertiary font-bold'
                   : 'text-on-surface-variant hover:text-on-surface'
@@ -172,7 +172,7 @@ export default function DevicesPage() {
             </button>
             <button
               onClick={() => setFilterStatus('free')}
-              className={`px-3 py-1.5 rounded-lg font-label-md text-label-md transition-all flex-1 sm:flex-initial text-center ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-label-md text-xs sm:text-label-md transition-all text-center ${
                 filterStatus === 'free'
                   ? 'bg-secondary-container/30 text-secondary font-bold'
                   : 'text-on-surface-variant hover:text-on-surface'
@@ -189,9 +189,9 @@ export default function DevicesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('devices_search_placeholder')}
-              className="w-full h-11 bg-surface-container rounded-xl ps-10 pe-space-md font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant border border-outline-variant/40 focus:border-primary outline-none transition-all"
+              className="w-full h-10 sm:h-11 bg-surface-container rounded-xl ps-9 sm:ps-10 pe-space-md text-xs sm:text-body-md text-on-surface placeholder:text-on-surface-variant border border-outline-variant/40 focus:border-primary outline-none transition-all"
             />
-            <span className="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+            <span className="material-symbols-outlined absolute start-2.5 sm:start-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] sm:text-[20px]">
               search
             </span>
             {searchQuery && (
@@ -259,7 +259,7 @@ export default function DevicesPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-space-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-space-lg">
           {filteredDevices.map((device) => (
             <DeviceCard
               key={device.id}
