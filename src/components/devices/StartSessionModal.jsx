@@ -51,7 +51,7 @@ export default function StartSessionModal({ deviceId, onClose }) {
     { label: isEn ? '4 Hours' : '4 ساعات', minutes: 240 },
   ];
 
-  const currencyStr = isEn ? 'EGP' : 'ج.م';
+  const currencyStr = isEn ? '$' : 'ج.م';
   const singleLabel = isEn ? 'Single' : 'فردي';
   const multiLabel = isEn ? 'Multi' : 'جماعي';
   const perHourStr = isEn ? 'hr' : 'ساعة';

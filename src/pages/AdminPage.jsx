@@ -829,7 +829,7 @@ export default function AdminPage() {
                     <div className="flex flex-col gap-1">
                       <label className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">person</span>
-                        <span>فردي (ج.م/ساعة):</span>
+                        <span>{isEn ? 'Single ($/hr):' : 'فردي (ج.م/ساعة):'}</span>
                       </label>
                       <input
                         type="number"
@@ -846,7 +846,7 @@ export default function AdminPage() {
                     <div className="flex flex-col gap-1">
                       <label className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">group</span>
-                        <span>جماعي (ج.م/ساعة):</span>
+                        <span>{isEn ? 'Multi ($/hr):' : 'جماعي (ج.م/ساعة):'}</span>
                       </label>
                       <input
                         type="number"
@@ -926,7 +926,7 @@ export default function AdminPage() {
                     </h4>
                   </div>
                   <span className="font-label-price text-label-price text-secondary font-bold">
-                    {product.price} ج.م
+                    {product.price} {isEn ? '$' : 'ج.م'}
                   </span>
                 </div>
 

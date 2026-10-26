@@ -225,7 +225,7 @@ export const translations = {
     // ── Device Card ──
     card_single: 'Single',
     card_multi: 'Multi',
-    card_currency_hour: 'EGP/hr',
+    card_currency_hour: '$/hr',
     card_status_free: 'Available',
     card_status_busy: 'Busy',
     card_customer: 'Customer:',
@@ -235,7 +235,7 @@ export const translations = {
     card_elapsed: 'Elapsed Time:',
     card_drinks: 'Orders:',
     card_current_total: 'Current Total:',
-    card_egp: 'EGP',
+    card_egp: '$',
     card_manage: 'Manage Session & Orders',
     card_start: 'Start New Session',
 

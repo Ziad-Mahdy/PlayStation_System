@@ -3,7 +3,7 @@ import useLanguageStore from '../../store/languageStore';
 export default function InvoiceModal({ invoice, onClose }) {
   const language = useLanguageStore((s) => s.language);
   const isEn = language === 'en';
-  const currencyStr = isEn ? 'EGP' : 'ج.م';
+  const currencyStr = isEn ? '$' : 'ج.م';
 
   if (!invoice) return null;
 

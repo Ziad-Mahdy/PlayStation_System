@@ -74,7 +74,7 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
   const { timeCost, ordersCost, total } = computeCosts(device, elapsed);
   const deviceIcon = getDeviceIcon(device.type, device.isVIP);
 
-  const currencyStr = isEn ? 'EGP' : 'ج.م';
+  const currencyStr = isEn ? '$' : 'ج.م';
   const singleLabel = isEn ? 'Single' : 'فردي';
   const multiLabel = isEn ? 'Multi' : 'جماعي';
   const perHourStr = isEn ? 'hr' : 'ساعة';

@@ -14,7 +14,7 @@ export default function SessionModal({ deviceId, onClose }) {
 
   const language = useLanguageStore((s) => s.language);
   const isEn = language === 'en';
-  const currencyStr = isEn ? 'EGP' : 'ج.م';
+  const currencyStr = isEn ? '$' : 'ج.م';
   const singleLabel = isEn ? 'Single' : 'فردي';
   const multiLabel = isEn ? 'Multi' : 'جماعي';
   const perHourStr = isEn ? 'hr' : 'ساعة';
