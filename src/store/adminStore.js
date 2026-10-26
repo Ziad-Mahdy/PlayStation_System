@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
+import useSubscriptionStore from './subscriptionStore';
+
+const getClientPhone = () => {
+  return useSubscriptionStore.getState().currentClient?.phone;
+};
 
 const useAdminStore = create((set, get) => ({
   products: [],
@@ -7,28 +12,20 @@ const useAdminStore = create((set, get) => ({
   isLoading: true,
   isSynced: false,
 
-  // ── Load products directly from Supabase ──
+  // ── جلب منتجات الكلاينت فقط من Supabase ──
   initSync: async () => {
-    try {
-      let dbProducts = await supabaseService.fetchProducts();
-      if (!dbProducts || dbProducts.length === 0) {
-        const defaultDrinks = [
-          { name: 'كانز بيبسي بارد', price: 15, category: 'مشروبات' },
-          { name: 'قهوة تركي مظبوط', price: 20, category: 'مشروبات' },
-          { name: 'شاي تلقيمة', price: 10, category: 'مشروبات' },
-          { name: 'مياه معدنية صغيرة', price: 7.5, category: 'مشروبات' },
-        ];
-        dbProducts = [];
-        for (let i = 0; i < defaultDrinks.length; i++) {
-          const item = { ...defaultDrinks[i], id: i + 1 };
-          dbProducts.push(item);
-          supabaseService.addProduct(item);
-        }
-      }
+    const phone = getClientPhone();
+    if (!phone) {
+      set({ products: [], isLoading: false });
+      return;
+    }
 
+    try {
+      const dbProducts = await supabaseService.fetchProducts(phone);
       const maxId = (dbProducts || []).reduce((max, p) => Math.max(max, p.id || 0), 0);
+
       set({
-        products: dbProducts || [],
+        products: dbProducts || [], // يبدأ فارغاً تماماً للكلاينت الجديد
         nextProductId: maxId + 1,
         isLoading: false,
         isSynced: true,
@@ -39,33 +36,38 @@ const useAdminStore = create((set, get) => ({
     }
   },
 
+  // ── إضافة منتج جديد للبوفيه ──
   addProduct: async (product) => {
+    const phone = getClientPhone();
     const nameTrimmed = (product.name || '').trim();
     const exists = get().products.some(
       (p) => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
     );
     if (exists) return false;
 
-    const tempId = get().nextProductId;
+    const tempId = Date.now();
     const newProd = { ...product, id: tempId, name: nameTrimmed };
 
     set((state) => ({
       products: [...state.products, newProd],
-      nextProductId: tempId + 1,
+      nextProductId: state.nextProductId + 1,
     }));
 
-    const created = await supabaseService.addProduct(newProd);
-    if (created && created.id) {
-      set((state) => ({
-        products: state.products.map((p) =>
-          p.id === tempId ? { ...p, id: created.id } : p
-        ),
-      }));
+    if (phone) {
+      const created = await supabaseService.insertProduct(newProd, phone);
+      if (created && created.id) {
+        set((state) => ({
+          products: state.products.map((p) =>
+            p.id === tempId ? { ...p, id: created.id } : p
+          ),
+        }));
+      }
     }
 
     return true;
   },
 
+  // ── تعديل منتج ──
   updateProduct: async (id, updates) => {
     if (updates.name) {
       const nameTrimmed = updates.name.trim();
@@ -86,6 +88,7 @@ const useAdminStore = create((set, get) => ({
     return true;
   },
 
+  // ── حذف منتج ──
   deleteProduct: async (id) => {
     set((state) => ({
       products: state.products.filter((p) => p.id !== id),

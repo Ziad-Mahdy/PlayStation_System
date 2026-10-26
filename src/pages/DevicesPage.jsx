@@ -208,6 +208,25 @@ export default function DevicesPage() {
             جاري مزامنة الأجهزة مع قاعدة البيانات...
           </p>
         </div>
+      ) : devices.length === 0 ? (
+        <div className="bg-surface-container-low rounded-3xl p-space-xl flex flex-col items-center justify-center text-center py-24 border border-outline-variant/25 shadow-lg">
+          <div className="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container shadow-md mb-4">
+            <span className="material-symbols-outlined text-[36px]">sports_esports</span>
+          </div>
+          <h3 className="font-headline-lg text-headline-lg text-on-surface">
+            أهلاً بك في نظام الكافيه الخاص بك! 🎮
+          </h3>
+          <p className="font-body-md text-body-md text-on-surface-variant max-w-md mt-2">
+            لم تقم بإضافة أي أجهزة حتى الآن. توجه إلى لوحة الأدمن للبدء في إضافة أجهزة الصالة وتحديد أسعار السنجل والمالتي.
+          </p>
+          <a
+            href="/admin"
+            className="mt-6 px-6 h-12 bg-primary text-on-primary font-headline-sm rounded-xl hover:brightness-110 shadow-lg flex items-center gap-2 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px]">add_circle</span>
+            <span>إضافة أجهزة من لوحة الأدمن</span>
+          </a>
+        </div>
       ) : filteredDevices.length === 0 ? (
         <div className="bg-surface-container-low rounded-2xl p-space-xl flex flex-col items-center justify-center text-center py-20 border border-outline-variant/20">
           <span className="material-symbols-outlined text-[56px] text-outline mb-space-sm">
