@@ -47,7 +47,7 @@ export default function AdminPage() {
   const [isAddDeviceModalOpen, setIsAddDeviceModalOpen] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
     name: '',
-    type: 'PlayStation 4',
+    type: 'PlayStation 5',
     isVIP: false,
     singlePrice: '45',
     multiPrice: '35',
@@ -214,7 +214,7 @@ export default function AdminPage() {
     setIsAddDeviceModalOpen(false);
     setNewDeviceForm({
       name: '',
-      type: categories[0] || 'PlayStation 4',
+      type: 'PS5',
       isVIP: false,
       singlePrice: '45',
       multiPrice: '35',
@@ -680,7 +680,7 @@ export default function AdminPage() {
                 onClick={() => {
                   setNewDeviceForm({
                     name: `جهاز ${devices.length + 1}`,
-                    type: categories[0] || 'PlayStation 4',
+                    type: categories[0] || 'PlayStation 5',
                     isVIP: false,
                     singlePrice: '45',
                     multiPrice: '35',

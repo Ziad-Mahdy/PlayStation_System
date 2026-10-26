@@ -37,32 +37,10 @@ const saveDevicesCache = (devices) => {
   }
 };
 
-const DEFAULT_CATEGORIES = ['PlayStation 4', 'PlayStation 5'];
-
-const getCachedCategories = () => {
-  const id = getClientIdentifier();
-  if (!id) return DEFAULT_CATEGORIES;
-  try {
-    const raw = localStorage.getItem(`ps_categories_cache_${id}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {}
-  return DEFAULT_CATEGORIES;
-};
-
-const saveCategoriesCache = (categories) => {
-  const id = getClientIdentifier();
-  if (id && categories) {
-    try {
-      localStorage.setItem(`ps_categories_cache_${id}`, JSON.stringify(categories));
-    } catch (e) {}
-  }
-};
+const DEFAULT_CATEGORIES = ['PlayStation 5', 'PlayStation 4', 'بلياردو', 'بينج بونج', 'كمبيوتر PC'];
 
 const useDevicesStore = create((set, get) => ({
-  categories: getCachedCategories(),
+  categories: DEFAULT_CATEGORIES,
   devices: getCachedDevices(), // استرجاع فوري من الكاش عند الـ Refresh لضمان عدم اختفاء الأجهزة أبداً
   completedSessions: [],
   nextSessionId: 1,
@@ -126,7 +104,6 @@ const useDevicesStore = create((set, get) => ({
       }
 
       saveDevicesCache(mergedDevices);
-      saveCategoriesCache(finalCategories);
       set({
         devices: mergedDevices,
         categories: finalCategories,
@@ -149,9 +126,7 @@ const useDevicesStore = create((set, get) => ({
 
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
-    const newCategories = [...get().categories, trimmed];
-    set({ categories: newCategories });
-    saveCategoriesCache(newCategories);
+    set((state) => ({ categories: [...state.categories, trimmed] }));
     if (identifier) {
       await supabaseService.addCategory(trimmed, identifier, client?.phone);
     }
@@ -161,9 +136,9 @@ const useDevicesStore = create((set, get) => ({
   deleteCategory: async (catName) => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
-    const newCategories = get().categories.filter((c) => c !== catName);
-    set({ categories: newCategories });
-    saveCategoriesCache(newCategories);
+    set((state) => ({
+      categories: state.categories.filter((c) => c !== catName),
+    }));
     if (identifier) {
       await supabaseService.deleteCategory(catName, identifier);
     }
