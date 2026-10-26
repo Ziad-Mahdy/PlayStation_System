@@ -10,6 +10,8 @@ import AdminPasswordModal from '../components/AdminPasswordModal';
 
 export default function DevicesPage() {
   const navigate = useNavigate();
+  const language = useLanguageStore((s) => s.language);
+  const isEn = language === 'en';
   const t = useLanguageStore((s) => s.t);
   const devices = useDevicesStore((s) => s.devices);
   const categories = useDevicesStore((s) => s.categories || []);
@@ -187,15 +189,15 @@ export default function DevicesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('devices_search_placeholder')}
-              className="w-full h-11 bg-surface-container rounded-xl pl-10 pr-space-md font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant border border-outline-variant/40 focus:border-primary outline-none transition-all"
+              className="w-full h-11 bg-surface-container rounded-xl ps-10 pe-space-md font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant border border-outline-variant/40 focus:border-primary outline-none transition-all"
             />
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+            <span className="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
               search
             </span>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-auto left-9 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>

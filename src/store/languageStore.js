@@ -16,22 +16,23 @@ const applyDocumentLanguage = (lang) => {
   }
 };
 
-// Initial document configuration
 const initialLang = getSavedLanguage();
 applyDocumentLanguage(initialLang);
 
+const makeTranslator = (lang) => (key, ...args) => {
+  const dict = translations[lang] || translations['ar'];
+  const val = dict?.[key] !== undefined ? dict[key] : (translations['ar']?.[key] || key);
+  if (typeof val === 'function') {
+    return val(...args);
+  }
+  return val;
+};
+
 const useLanguageStore = create((set, get) => ({
   language: initialLang,
-
-  // Helper function to get translation
-  t: (key, ...args) => {
-    const lang = get().language;
-    const val = translations[lang]?.[key] || translations['ar']?.[key] || key;
-    if (typeof val === 'function') {
-      return val(...args);
-    }
-    return val;
-  },
+  isEn: initialLang === 'en',
+  isAr: initialLang === 'ar',
+  t: makeTranslator(initialLang),
 
   setLanguage: (newLang) => {
     if (newLang !== 'ar' && newLang !== 'en') return;
@@ -39,7 +40,12 @@ const useLanguageStore = create((set, get) => ({
       localStorage.setItem('playstation_language', newLang);
     } catch (e) {}
     applyDocumentLanguage(newLang);
-    set({ language: newLang });
+    set({
+      language: newLang,
+      isEn: newLang === 'en',
+      isAr: newLang === 'ar',
+      t: makeTranslator(newLang),
+    });
   },
 
   toggleLanguage: () => {

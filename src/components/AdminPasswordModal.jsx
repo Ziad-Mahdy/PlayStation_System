@@ -10,9 +10,9 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
   const [error, setError] = useState('');
   const verifyAndEnterAdmin = useAuthStore((s) => s.verifyAndEnterAdmin);
   const language = useLanguageStore((s) => s.language);
+  const isEn = language === 'en';
   const t = useLanguageStore((s) => s.t);
   const inputRef = useRef(null);
-  const isEn = language === 'en';
 
   // Focus input when modal opens
   useEffect(() => {
@@ -47,7 +47,8 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className={`relative w-full max-w-sm bg-surface-container rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] overflow-hidden ${shaking ? 'animate-shake' : ''}`}
+        dir={isEn ? 'ltr' : 'rtl'}
+        className={`relative w-full max-w-sm bg-surface-container rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] overflow-hidden border border-outline-variant/30 ${shaking ? 'animate-shake' : ''}`}
       >
         {/* Top accent bar */}
         <div className="h-1 w-full bg-primary-container"></div>
@@ -71,8 +72,9 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-space-md start-auto end-space-md w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+            className="absolute top-space-md end-space-md w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -88,18 +90,18 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
               placeholder={t('admin_modal_placeholder')}
-              className={`w-full h-14 bg-surface-container-low rounded-xl px-space-md pe-12 font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant border transition-all outline-none ${
+              className={`w-full h-14 bg-surface-container-low rounded-xl ps-4 pe-12 font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant border transition-all outline-none ${
                 error
                   ? 'border-error focus:border-error'
                   : 'border-outline-variant focus:border-primary'
               }`}
-              dir="ltr"
+              dir={isEn ? 'ltr' : 'rtl'}
               autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              className="absolute end-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[22px]">
                 {showPassword ? 'visibility_off' : 'visibility'}
@@ -129,7 +131,9 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
               disabled={!password}
               className="flex-1 h-12 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-headline-sm rounded-xl transition-all transform active:scale-95 shadow-lg shadow-primary-container/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-space-xs cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[20px] rtl:rotate-0 ltr:rotate-180">login</span>
+              <span className="material-symbols-outlined text-[20px]">
+                {isEn ? 'login' : 'lock_open'}
+              </span>
               <span>{t('admin_modal_submit')}</span>
             </button>
           </div>

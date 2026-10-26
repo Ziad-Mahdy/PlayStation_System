@@ -59,7 +59,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center p-4 relative overflow-hidden">
+    <div
+      key={language}
+      dir={isEn ? 'ltr' : 'rtl'}
+      lang={language}
+      className="min-h-screen bg-surface flex flex-col justify-center items-center p-4 relative overflow-hidden"
+    >
       {/* Top Language Switcher */}
       <div className="absolute top-6 end-6 z-20">
         <button
