@@ -2,8 +2,18 @@ import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
 import useSubscriptionStore from './subscriptionStore';
 
+const getClientSession = () => {
+  try {
+    const raw = localStorage.getItem('playstation_client_session');
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (e) {}
+  return useSubscriptionStore.getState().currentClient;
+};
+
 const getClientIdentifier = () => {
-  const client = useSubscriptionStore.getState().currentClient;
+  const client = getClientSession();
   return client?.code || client?.phone || null;
 };
 
@@ -35,26 +45,46 @@ const useAdminStore = create((set, get) => ({
 
   // ── جلب منتجات الكلاينت فقط من Supabase ──
   initSync: async () => {
-    const identifier = getClientIdentifier();
+    const client = getClientSession();
+    const identifier = client?.code || client?.phone;
     if (!identifier) {
       set({ products: [], isLoading: false });
       return;
     }
 
     try {
-      const dbProducts = await supabaseService.fetchProducts(identifier);
-      if (dbProducts) {
-        const maxId = dbProducts.reduce((max, p) => Math.max(max, p.id || 0), 0);
-        saveProductsCache(dbProducts);
-        set({
-          products: dbProducts,
-          nextProductId: maxId + 1,
-          isLoading: false,
-          isSynced: true,
-        });
+      const dbProducts = await supabaseService.fetchProducts(identifier, client?.phone);
+      const cached = getCachedProducts();
+      const currentProducts = (get().products && get().products.length > 0) ? get().products : cached;
+
+      let finalProducts = [];
+      if (dbProducts && dbProducts.length > 0) {
+        finalProducts = dbProducts;
+      } else if (currentProducts && currentProducts.length > 0) {
+        // لو الكاش به منتجات والسيرفر لسه ملوش: نحافظ عليها ونرفعها للسيرفر
+        finalProducts = currentProducts;
+        for (const p of currentProducts) {
+          supabaseService.insertProduct(p, identifier, client?.phone).then((created) => {
+            if (created && created.id) {
+              set((state) => ({
+                products: state.products.map((item) => (item.name === p.name ? { ...item, id: created.id } : item)),
+              }));
+              saveProductsCache(get().products);
+            }
+          });
+        }
       } else {
-        set({ isLoading: false });
+        finalProducts = [];
       }
+
+      saveProductsCache(finalProducts);
+      const maxId = finalProducts.reduce((max, p) => Math.max(max, p.id || 0), 0);
+      set({
+        products: finalProducts,
+        nextProductId: maxId + 1,
+        isLoading: false,
+        isSynced: true,
+      });
     } catch (err) {
       console.error('Failed to sync admin store with Supabase:', err);
       set({ isLoading: false });
@@ -63,7 +93,8 @@ const useAdminStore = create((set, get) => ({
 
   // ── إضافة منتج جديد للبوفيه ──
   addProduct: async (product) => {
-    const identifier = getClientIdentifier();
+    const client = getClientSession();
+    const identifier = client?.code || client?.phone;
     const nameTrimmed = (product.name || '').trim();
     const exists = get().products.some(
       (p) => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
@@ -81,7 +112,7 @@ const useAdminStore = create((set, get) => ({
     saveProductsCache(updated);
 
     if (identifier) {
-      const created = await supabaseService.insertProduct(newProd, identifier);
+      const created = await supabaseService.insertProduct(newProd, identifier, client?.phone);
       if (created && created.id) {
         const withRealId = get().products.map((p) =>
           p.id === tempId ? { ...p, id: created.id } : p

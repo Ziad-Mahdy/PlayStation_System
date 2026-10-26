@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useDevicesStore from '../store/devicesStore';
 import DeviceCard from '../components/devices/DeviceCard';
 import StartSessionModal from '../components/devices/StartSessionModal';
 import SessionModal from '../components/devices/SessionModal';
 import WorkerAccountsModal from '../components/devices/WorkerAccountsModal';
+import AdminPasswordModal from '../components/AdminPasswordModal';
 
 export default function DevicesPage() {
+  const navigate = useNavigate();
   const devices = useDevicesStore((s) => s.devices);
   const categories = useDevicesStore((s) => s.categories || []);
   const isLoading = useDevicesStore((s) => s.isLoading);
@@ -19,6 +22,7 @@ export default function DevicesPage() {
   const [activeSessionDeviceId, setActiveSessionDeviceId] = useState(null);
   const [startSessionDeviceId, setStartSessionDeviceId] = useState(null);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
+  const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
 
   // Statistics
   const stats = useMemo(() => {
@@ -219,13 +223,14 @@ export default function DevicesPage() {
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mt-2">
             لم تقم بإضافة أي أجهزة حتى الآن. توجه إلى لوحة الأدمن للبدء في إضافة أجهزة الصالة وتحديد أسعار السنجل والمالتي.
           </p>
-          <a
-            href="/admin"
-            className="mt-6 px-6 h-12 bg-primary text-on-primary font-headline-sm rounded-xl hover:brightness-110 shadow-lg flex items-center gap-2 transition-all"
+          <button
+            type="button"
+            onClick={() => setShowAdminPasswordModal(true)}
+            className="mt-6 px-6 h-12 bg-primary text-on-primary font-headline-sm rounded-xl hover:brightness-110 shadow-lg flex items-center gap-2 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">add_circle</span>
             <span>إضافة أجهزة من لوحة الأدمن</span>
-          </a>
+          </button>
         </div>
       ) : filteredDevices.length === 0 ? (
         <div className="bg-surface-container-low rounded-2xl p-space-xl flex flex-col items-center justify-center text-center py-20 border border-outline-variant/20">
@@ -276,6 +281,13 @@ export default function DevicesPage() {
           onClose={() => setActiveSessionDeviceId(null)}
         />
       )}
+
+      {/* ── Admin Password Modal (للدخول المباشر للوحة الأدمن) ── */}
+      <AdminPasswordModal
+        isOpen={showAdminPasswordModal}
+        onClose={() => setShowAdminPasswordModal(false)}
+        onSuccess={() => navigate('/admin')}
+      />
 
       {/* ── Worker Accounts Modal ── */}
       <WorkerAccountsModal

@@ -2,20 +2,25 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const supabaseService = {
   // ── Devices (معزولة لكل مشترك بـ الكود / الهاتف) ──
-  async fetchDevices(identifier) {
+  async fetchDevices(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
+      const clientPhone = phone || identifier;
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
       let { data, error } = await supabase
         .from('devices')
         .select('*')
-        .or(`client_code.eq.${identifier},client_phone.eq.${identifier}`)
+        .or(orFilter)
         .order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('devices')
           .select('*')
-          .eq('client_phone', identifier)
+          .eq('client_phone', clientPhone)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -43,12 +48,12 @@ export const supabaseService = {
     }
   },
 
-  async insertDevice(device, identifier) {
+  async insertDevice(device, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return null;
     try {
       const payload = {
         client_code: identifier,
-        client_phone: identifier,
+        client_phone: phone || identifier,
         name: device.name.trim(),
         type: device.type,
         is_vip: device.isVIP,
@@ -121,20 +126,25 @@ export const supabaseService = {
   },
 
   // ── Categories ──
-  async fetchCategories(identifier) {
+  async fetchCategories(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
+      const clientPhone = phone || identifier;
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
       let { data, error } = await supabase
         .from('categories')
         .select('name')
-        .or(`client_code.eq.${identifier},client_phone.eq.${identifier}`)
+        .or(orFilter)
         .order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('categories')
           .select('name')
-          .eq('client_phone', identifier)
+          .eq('client_phone', clientPhone)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -147,17 +157,17 @@ export const supabaseService = {
     }
   },
 
-  async addCategory(name, identifier) {
+  async addCategory(name, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return;
     try {
       let res = await supabase
         .from('categories')
-        .insert({ name: name.trim(), client_code: identifier, client_phone: identifier });
+        .insert({ name: name.trim(), client_code: identifier, client_phone: phone || identifier });
 
       if (res.error && res.error.code === '42703') {
         await supabase
           .from('categories')
-          .insert({ name: name.trim(), client_phone: identifier });
+          .insert({ name: name.trim(), client_phone: phone || identifier });
       }
     } catch (err) {
       console.error('addCategory exception:', err);
@@ -177,20 +187,25 @@ export const supabaseService = {
   },
 
   // ── Products (البوفيه والمشروبات معزولة لكل مشترك) ──
-  async fetchProducts(identifier) {
+  async fetchProducts(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
+      const clientPhone = phone || identifier;
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
       let { data, error } = await supabase
         .from('products')
         .select('*')
-        .or(`client_code.eq.${identifier},client_phone.eq.${identifier}`)
+        .or(orFilter)
         .order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('products')
           .select('*')
-          .eq('client_phone', identifier)
+          .eq('client_phone', clientPhone)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -209,12 +224,12 @@ export const supabaseService = {
     }
   },
 
-  async insertProduct(product, identifier) {
+  async insertProduct(product, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return null;
     try {
       const payload = {
         client_code: identifier,
-        client_phone: identifier,
+        client_phone: phone || identifier,
         name: product.name.trim(),
         price: product.price,
         category: product.category || 'مشروبات',
@@ -268,20 +283,25 @@ export const supabaseService = {
   },
 
   // ── Completed Sessions / Invoices ──
-  async fetchCompletedSessions(identifier) {
+  async fetchCompletedSessions(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
+      const clientPhone = phone || identifier;
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
       let { data, error } = await supabase
         .from('completed_sessions')
         .select('*')
-        .or(`client_code.eq.${identifier},client_phone.eq.${identifier}`)
+        .or(orFilter)
         .order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('completed_sessions')
           .select('*')
-          .eq('client_phone', identifier)
+          .eq('client_phone', clientPhone)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -310,12 +330,12 @@ export const supabaseService = {
     }
   },
 
-  async addCompletedSession(session, identifier) {
+  async addCompletedSession(session, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return null;
     try {
       const payload = {
         client_code: identifier,
-        client_phone: identifier,
+        client_phone: phone || identifier,
         device_name: session.deviceName,
         device_type: session.deviceType,
         is_vip: session.isVIP,

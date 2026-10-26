@@ -77,6 +77,14 @@ CREATE TABLE IF NOT EXISTS public.completed_sessions (
 );
 
 -- ==============================================================================
+-- إزالة قيود الأسماء العامة التي تمنع تكرار أسماء الأجهزة أو المنتجات بين العملاء المختلفين
+-- (مهم جداً لتتمكن كل صالة من تسمية أجهزتها مثل 'جهاز 1' دون تعارض)
+-- ==============================================================================
+ALTER TABLE public.devices DROP CONSTRAINT IF EXISTS devices_name_key;
+ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_name_key;
+ALTER TABLE public.categories DROP CONSTRAINT IF EXISTS categories_name_key;
+
+-- ==============================================================================
 -- ترقية الجداول وإضافة الأعمدة إن كانت موجودة مسبقاً
 -- ==============================================================================
 DO $$
@@ -86,23 +94,43 @@ BEGIN
     ALTER TABLE public.subscriptions ADD COLUMN device_serial TEXT DEFAULT NULL;
   END IF;
 
-  -- إضافة client_code في الجداول
+  -- إضافة client_code و client_phone في الجداول
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='devices' AND column_name='client_code') THEN
     ALTER TABLE public.devices ADD COLUMN client_code TEXT NOT NULL DEFAULT 'default';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='devices' AND column_name='client_phone') THEN
+    ALTER TABLE public.devices ADD COLUMN client_phone TEXT NOT NULL DEFAULT 'default';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='categories' AND column_name='client_code') THEN
     ALTER TABLE public.categories ADD COLUMN client_code TEXT NOT NULL DEFAULT 'default';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='categories' AND column_name='client_phone') THEN
+    ALTER TABLE public.categories ADD COLUMN client_phone TEXT NOT NULL DEFAULT 'default';
+  END IF;
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='products' AND column_name='client_code') THEN
     ALTER TABLE public.products ADD COLUMN client_code TEXT NOT NULL DEFAULT 'default';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='products' AND column_name='client_phone') THEN
+    ALTER TABLE public.products ADD COLUMN client_phone TEXT NOT NULL DEFAULT 'default';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='completed_sessions' AND column_name='client_code') THEN
     ALTER TABLE public.completed_sessions ADD COLUMN client_code TEXT NOT NULL DEFAULT 'default';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name='completed_sessions' AND column_name='client_phone') THEN
+    ALTER TABLE public.completed_sessions ADD COLUMN client_phone TEXT NOT NULL DEFAULT 'default';
+  END IF;
 END $$;
+
+-- فهارس لتسريع البحث والعزل لكل كود عميل
+CREATE INDEX IF NOT EXISTS idx_devices_client_code ON public.devices (client_code);
+CREATE INDEX IF NOT EXISTS idx_devices_client_phone ON public.devices (client_phone);
+CREATE INDEX IF NOT EXISTS idx_products_client_code ON public.products (client_code);
+CREATE INDEX IF NOT EXISTS idx_products_client_phone ON public.products (client_phone);
+CREATE INDEX IF NOT EXISTS idx_categories_client_code ON public.categories (client_code);
+CREATE INDEX IF NOT EXISTS idx_completed_sessions_client_code ON public.completed_sessions (client_code);
 
 -- ==============================================================================
 -- تمكين سياسات الأمان (Row Level Security) لجميع الجداول
