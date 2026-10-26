@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import useSubscriptionStore from '../store/subscriptionStore';
+import useLanguageStore from '../store/languageStore';
 import AdminPasswordModal from './AdminPasswordModal';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -9,10 +10,12 @@ import { isSupabaseConfigured } from '../lib/supabase';
 function SubscriptionCountdown({ expiresAt }) {
   const [timeLeft, setTimeLeft] = useState('');
   const [statusColor, setStatusColor] = useState('text-emerald-400 bg-emerald-500/10 border-emerald-500/30');
+  const t = useLanguageStore((s) => s.t);
+  const language = useLanguageStore((s) => s.language);
 
   useEffect(() => {
     if (!expiresAt) {
-      setTimeLeft('اشتراك غير مفعل');
+      setTimeLeft(t('header_sub_inactive'));
       return;
     }
 
@@ -22,7 +25,7 @@ function SubscriptionCountdown({ expiresAt }) {
       const diff = expiry - now;
 
       if (diff <= 0) {
-        setTimeLeft('انتهى الاشتراك');
+        setTimeLeft(t('header_sub_expired'));
         setStatusColor('text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse');
         return;
       }
@@ -39,17 +42,17 @@ function SubscriptionCountdown({ expiresAt }) {
         setStatusColor('text-rose-400 bg-rose-500/15 border-rose-500/30 animate-pulse');
       }
 
-      setTimeLeft(`متبقي ${days} ي و ${hours} س و ${minutes} د`);
+      setTimeLeft(t('header_sub_remaining', days, hours, minutes));
     };
 
     calculate();
     const interval = setInterval(calculate, 30000); // تحديث كل 30 ثانية
     return () => clearInterval(interval);
-  }, [expiresAt]);
+  }, [expiresAt, t, language]);
 
   return (
     <div
-      title="مدة الاشتراك السحابي المتبقية"
+      title={language === 'ar' ? 'مدة الاشتراك السحابي المتبقية' : 'Remaining Cloud Subscription Duration'}
       className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-sm ${statusColor}`}
     >
       <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
@@ -61,22 +64,26 @@ function SubscriptionCountdown({ expiresAt }) {
 // ── Live Clock & Date Component ───────────────────
 function LiveClock() {
   const [time, setTime] = useState(new Date());
+  const language = useLanguageStore((s) => s.language);
+
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const timeStr = time.toLocaleTimeString('ar-EG', {
+  const locale = language === 'ar' ? 'ar-EG' : 'en-US';
+
+  const timeStr = time.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: true,
   });
 
-  const dateStr = time.toLocaleDateString('ar-EG', {
-    weekday: 'long',
+  const dateStr = time.toLocaleDateString(locale, {
+    weekday: 'short',
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   });
 
@@ -106,6 +113,10 @@ export default function Header() {
   const logoutClient = useSubscriptionStore((s) => s.logoutClient);
   const isDevLoggedIn = useSubscriptionStore((s) => s.isDevLoggedIn);
 
+  const language = useLanguageStore((s) => s.language);
+  const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
+  const t = useLanguageStore((s) => s.t);
+
   const navigate = useNavigate();
   const location = useLocation();
   const onAdminPage = location.pathname === '/admin';
@@ -127,7 +138,7 @@ export default function Header() {
   };
 
   const handleLogout = () => {
-    if (window.confirm('هل تريد تسجيل الخروج من السيستم؟ يمكنك الدخول مجدداً بنفس الكود في أي وقت.')) {
+    if (window.confirm(t('header_logout_confirm'))) {
       logoutClient();
       navigate('/login');
     }
@@ -149,11 +160,11 @@ export default function Header() {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
-                  {currentClient ? currentClient.shop_name : 'بلايستيشن كافيه'}
+                  {currentClient ? currentClient.shop_name : t('header_title_default')}
                 </span>
                 {/* Cloud Sync Status Badge */}
                 <span
-                  title={isSupabaseConfigured ? 'متصل بقاعدة بيانات Supabase السحابية' : 'الوضع المحلي (Offline)'}
+                  title={isSupabaseConfigured ? t('header_cloud_tooltip') : t('header_local_tooltip')}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                     isSupabaseConfigured
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
@@ -161,17 +172,17 @@ export default function Header() {
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
-                  {isSupabaseConfigured ? 'سحابي' : 'محلي'}
+                  {isSupabaseConfigured ? t('header_cloud') : t('header_local')}
                 </span>
               </div>
               <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
                 {currentClient ? (
                   <>
-                    <span>العميل:</span>
+                    <span>{t('header_client')}</span>
                     <strong className="text-on-surface">{currentClient.client_name}</strong>
                   </>
                 ) : (
-                  'نظام إدارة الصالة والحسابات'
+                  t('header_subtitle')
                 )}
               </span>
             </div>
@@ -185,7 +196,7 @@ export default function Header() {
             <LiveClock />
           </div>
 
-          {/* ── Navigation Actions ── */}
+          {/* ── Navigation Actions & Controls ── */}
           <div className="flex items-center gap-space-sm">
             {/* If Developer is logged in, show quick Dev Panel button */}
             {isDevLoggedIn && (
@@ -195,9 +206,20 @@ export default function Header() {
                 className="h-10 px-3 rounded-xl bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">terminal</span>
-                <span className="hidden sm:inline">لوحة المطور</span>
+                <span className="hidden sm:inline">{t('header_dev_panel')}</span>
               </button>
             )}
+
+            {/* Language Switcher Button (عربي / English) */}
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              title={language === 'ar' ? 'Switch to English' : 'التحويل إلى العربية'}
+              className="h-11 px-3 rounded-2xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant/30 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">translate</span>
+              <span>{t('header_switch_lang')}</span>
+            </button>
 
             <nav className="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-2xl border border-outline-variant/20 shadow-sm">
               {/* Devices Tab */}
@@ -212,7 +234,7 @@ export default function Header() {
                   }`
                 }
               >
-                الأجهزة
+                {t('header_devices')}
               </NavLink>
 
               {/* Admin Panel Button */}
@@ -229,7 +251,7 @@ export default function Header() {
                   <span className="material-symbols-outlined text-[18px]">
                     {onAdminPage && isAdmin ? 'shield_person' : 'lock'}
                   </span>
-                  <span>لوحة الأدمن</span>
+                  <span>{t('header_admin')}</span>
                 </span>
               </button>
             </nav>
@@ -239,11 +261,11 @@ export default function Header() {
               <button
                 type="button"
                 onClick={handleLogout}
-                title="تسجيل الخروج من الحساب"
+                title={language === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout from account'}
                 className="h-11 px-3 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 flex items-center justify-center gap-1 text-xs font-semibold transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">logout</span>
-                <span className="hidden sm:inline">خروج</span>
+                <span className="hidden sm:inline">{t('header_logout')}</span>
               </button>
             )}
           </div>

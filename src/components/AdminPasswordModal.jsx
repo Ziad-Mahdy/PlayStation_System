@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
+import useLanguageStore from '../store/languageStore';
 import toast from 'react-hot-toast';
 
 export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
@@ -8,7 +9,10 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
   const [shaking, setShaking] = useState(false);
   const [error, setError] = useState('');
   const verifyAndEnterAdmin = useAuthStore((s) => s.verifyAndEnterAdmin);
+  const language = useLanguageStore((s) => s.language);
+  const t = useLanguageStore((s) => s.t);
   const inputRef = useRef(null);
+  const isEn = language === 'en';
 
   // Focus input when modal opens
   useEffect(() => {
@@ -23,11 +27,11 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     const success = verifyAndEnterAdmin(password);
     if (success) {
-      toast.success('أهلاً بك يا مدير! 👑');
+      toast.success(t('admin_modal_welcome'));
       onClose();
       onSuccess();
     } else {
-      setError('كلمة المرور غلط. حاول تاني.');
+      setError(t('admin_modal_wrong'));
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
       setPassword('');
@@ -60,15 +64,15 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
           </div>
           <div>
             <h2 className="font-headline-md text-headline-md text-on-surface">
-              دخول لوحة الأدمن
+              {t('admin_modal_title')}
             </h2>
             <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-              أدخل كلمة مرور المدير للمتابعة
+              {t('admin_modal_subtitle')}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="absolute top-space-md left-space-md w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors"
+            className="absolute top-space-md start-auto end-space-md w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -83,8 +87,8 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              placeholder="كلمة المرور"
-              className={`w-full h-14 bg-surface-container-low rounded-xl px-space-md pl-12 font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant border transition-all outline-none ${
+              placeholder={t('admin_modal_placeholder')}
+              className={`w-full h-14 bg-surface-container-low rounded-xl px-space-md pe-12 font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant border transition-all outline-none ${
                 error
                   ? 'border-error focus:border-error'
                   : 'border-outline-variant focus:border-primary'
@@ -95,7 +99,7 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[22px]">
                 {showPassword ? 'visibility_off' : 'visibility'}
@@ -116,17 +120,17 @@ export default function AdminPasswordModal({ isOpen, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-12 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant font-headline-sm text-headline-sm rounded-xl transition-all"
+              className="flex-1 h-12 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant font-headline-sm text-headline-sm rounded-xl transition-all cursor-pointer"
             >
-              إلغاء
+              {isEn ? 'Cancel' : 'إلغاء'}
             </button>
             <button
               type="submit"
               disabled={!password}
-              className="flex-1 h-12 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-headline-sm rounded-xl transition-all transform active:scale-95 shadow-lg shadow-primary-container/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-space-xs"
+              className="flex-1 h-12 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-headline-sm rounded-xl transition-all transform active:scale-95 shadow-lg shadow-primary-container/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-space-xs cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[20px]">login</span>
-              <span>دخول</span>
+              <span className="material-symbols-outlined text-[20px] rtl:rotate-0 ltr:rotate-180">login</span>
+              <span>{t('admin_modal_submit')}</span>
             </button>
           </div>
         </form>

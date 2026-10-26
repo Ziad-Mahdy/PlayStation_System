@@ -1,38 +1,43 @@
-import { formatTime } from './DeviceCard';
+import useLanguageStore from '../../store/languageStore';
 
 export default function InvoiceModal({ invoice, onClose }) {
+  const language = useLanguageStore((s) => s.language);
+  const isEn = language === 'en';
+  const currencyStr = isEn ? 'EGP' : 'ج.م';
+
   if (!invoice) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const startTimeFormatted = new Date(invoice.startTime).toLocaleTimeString('ar-EG', {
+  const locale = isEn ? 'en-US' : 'ar-EG';
+
+  const startTimeFormatted = new Date(invoice.startTime).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
   });
 
-  const endTimeFormatted = new Date(invoice.endTime).toLocaleTimeString('ar-EG', {
+  const endTimeFormatted = new Date(invoice.endTime).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
   });
 
-  const dateFormatted = new Date(invoice.endTime).toLocaleDateString('ar-EG', {
-    weekday: 'long',
+  const dateFormatted = new Date(invoice.endTime).toLocaleDateString(locale, {
+    weekday: 'short',
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
   });
 
-  // Convert duration to human readable Arabic format
+  // Convert duration to human readable format
   const hours = Math.floor((invoice.durationSeconds || 0) / 3600);
   const minutes = Math.floor(((invoice.durationSeconds || 0) % 3600) / 60);
-  const durationText =
-    hours > 0
-      ? `${hours} ساعة و ${minutes} دقيقة`
-      : `${minutes} دقيقة`;
+  const durationText = isEn
+    ? (hours > 0 ? `${hours} hr ${minutes} min` : `${minutes} min`)
+    : (hours > 0 ? `${hours} ساعة و ${minutes} دقيقة` : `${minutes} دقيقة`);
 
   return (
     <div
@@ -47,7 +52,7 @@ export default function InvoiceModal({ invoice, onClose }) {
           {/* Close button top corner */}
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors"
+            className="absolute top-4 start-4 w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-highest text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -57,13 +62,13 @@ export default function InvoiceModal({ invoice, onClose }) {
           </div>
 
           <h2 className="font-headline-lg text-headline-lg text-on-surface">
-            فاتورة حساب - بلايستيشن كافيه
+            {isEn ? 'Receipt - PlayStation Cafe' : 'فاتورة حساب - بلايستيشن كافيه'}
           </h2>
           <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-            إيصال دفع رسمي للزبون
+            {isEn ? 'Official Customer Receipt' : 'إيصال دفع رسمي للزبون'}
           </p>
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-outline font-mono">
-            <span>رقم الإيصال: #{invoice.id || Math.floor(1000 + Math.random() * 9000)}</span>
+            <span>{isEn ? 'Invoice #' : 'رقم الإيصال: #'}{invoice.id || Math.floor(1000 + Math.random() * 9000)}</span>
             <span>•</span>
             <span>{dateFormatted}</span>
           </div>
@@ -87,108 +92,94 @@ export default function InvoiceModal({ invoice, onClose }) {
               </div>
             </div>
 
-            <div className="text-left">
+            <div className="text-end">
               <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-bold bg-surface-container-high text-primary-fixed">
-                لعب {invoice.mode === 'single' ? 'فردي (Single)' : 'جماعي (Multi)'}
+                {invoice.mode === 'single' ? (isEn ? 'Single Play' : 'لعب فردي (Single)') : (isEn ? 'Multiplayer' : 'لعب جماعي (Multi)')}
               </span>
-              <p className="text-[11px] text-outline mt-0.5">
-                {invoice.hourlyRate || (invoice.mode === 'single' ? invoice.singlePrice : invoice.multiPrice)} ج.م/ساعة
+              <p className="text-[11px] text-outline mt-0.5 dir-ltr">
+                {invoice.hourlyRate || (invoice.mode === 'single' ? invoice.singlePrice : invoice.multiPrice)} {currencyStr}/{isEn ? 'hr' : 'ساعة'}
               </p>
             </div>
           </div>
 
           {/* Customer / Note if provided */}
           {invoice.customerName && (
-            <div className="bg-surface-container-low px-space-md py-2.5 rounded-xl flex items-center justify-between text-xs border border-outline-variant/30">
-              <span className="text-on-surface-variant flex items-center gap-1 font-medium">
-                <span className="material-symbols-outlined text-[16px] text-secondary">person</span>
-                <span>الزبون / ملحوظة الحجز:</span>
-              </span>
-              <span className="font-bold text-secondary text-sm">{invoice.customerName}</span>
+            <div className="bg-surface-container-low px-space-md py-2 rounded-xl border border-outline-variant/15 flex items-center justify-between text-xs">
+              <span className="text-on-surface-variant">{isEn ? 'Customer Name:' : 'اسم الزبون:'}</span>
+              <span className="font-bold text-secondary">👤 {invoice.customerName}</span>
             </div>
           )}
 
-          {/* Time Breakdown Card */}
-          <div className="bg-surface-container-low p-space-md rounded-2xl border border-outline-variant/20 flex flex-col gap-space-xs">
-            <div className="flex items-center justify-between border-b border-outline-variant/15 pb-2">
-              <span className="font-label-md text-label-md text-primary font-bold flex items-center gap-1">
-                <span className="material-symbols-outlined text-[18px]">timer</span>
-                <span>تفاصيل مدة اللعب:</span>
+          {/* Time Calculation Details */}
+          <div className="bg-surface-container-low p-space-md rounded-2xl border border-outline-variant/20 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs text-on-surface-variant pb-2 border-b border-outline-variant/10">
+              <span>{isEn ? 'Start Time:' : 'وقت البدء:'}</span>
+              <span className="font-mono text-on-surface">{startTimeFormatted}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-on-surface-variant pb-2 border-b border-outline-variant/10">
+              <span>{isEn ? 'End Time:' : 'وقت الانتهاء:'}</span>
+              <span className="font-mono text-on-surface">{endTimeFormatted}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-on-surface-variant pb-2 border-b border-outline-variant/10">
+              <span>{isEn ? 'Total Duration:' : 'المدة الإجمالية:'}</span>
+              <span className="font-bold text-primary font-mono">{durationText}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm pt-1">
+              <span className="font-bold text-on-surface">{isEn ? 'Time Charge:' : 'تكلفة الوقت:'}</span>
+              <span className="font-headline-sm text-headline-sm text-primary font-bold dir-ltr">
+                {invoice.timeCost} {currencyStr}
               </span>
-              <span className="font-label-md text-label-md text-on-surface font-extrabold font-mono">
-                {formatTime(invoice.durationSeconds)}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs py-1 text-on-surface-variant">
-              <div>
-                <span className="text-outline block">بدأ في:</span>
-                <span className="font-bold text-on-surface">{startTimeFormatted}</span>
-              </div>
-              <div>
-                <span className="text-outline block">انتهى في:</span>
-                <span className="font-bold text-on-surface">{endTimeFormatted}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1 border-t border-outline-variant/10 text-xs">
-              <span className="text-on-surface-variant">الوقت الفعلي المحسوب:</span>
-              <span className="font-bold text-on-surface">{durationText}</span>
-            </div>
-
-            <div className="flex items-center justify-between pt-1 text-body-md font-bold text-primary">
-              <span>حساب الوقت المستحق:</span>
-              <span>{invoice.timeCost?.toFixed(2)} ج.م</span>
             </div>
           </div>
 
-          {/* Orders / Drinks Breakdown (if any) */}
+          {/* Orders / Drinks Breakdown if any */}
           {invoice.orders && invoice.orders.length > 0 && (
-            <div className="bg-surface-container-low p-space-md rounded-2xl border border-outline-variant/20 flex flex-col gap-space-xs">
-              <div className="flex items-center justify-between border-b border-outline-variant/15 pb-2">
-                <span className="font-label-md text-label-md text-primary font-bold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[18px]">local_cafe</span>
-                  <span>المشروبات والطلبات ({invoice.orders.length}):</span>
-                </span>
-                <span className="font-label-md text-label-md text-tertiary font-bold">
-                  {invoice.ordersCost?.toFixed(2)} ج.م
-                </span>
-              </div>
+            <div className="bg-surface-container-low p-space-md rounded-2xl border border-outline-variant/20 flex flex-col gap-2">
+              <span className="text-xs text-on-surface-variant font-bold mb-1 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px] text-secondary">local_cafe</span>
+                <span>{isEn ? 'Buffet & Drinks Details:' : 'تفاصيل المشروبات والطلبات:'}</span>
+              </span>
 
-              <div className="flex flex-col divide-y divide-outline-variant/10">
-                {invoice.orders.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-1.5 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-5 h-5 rounded bg-surface-container-high flex items-center justify-center font-bold text-primary">
-                        {item.qty}
-                      </span>
-                      <span className="text-on-surface font-medium">{item.name}</span>
-                    </div>
-                    <span className="text-on-surface-variant font-bold">
-                      {(item.price * item.qty).toFixed(2)} ج.م
+              <div className="flex flex-col gap-1.5 divide-y divide-outline-variant/10">
+                {invoice.orders.map((order, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs pt-1.5">
+                    <span className="text-on-surface">
+                      {order.name} <span className="text-outline font-mono">({order.qty} × {order.price})</span>
+                    </span>
+                    <span className="font-bold text-on-surface dir-ltr">
+                      {(order.qty * order.price).toFixed(2)} {currencyStr}
                     </span>
                   </div>
                 ))}
               </div>
+
+              <div className="flex items-center justify-between text-sm pt-2 mt-1 border-t border-outline-variant/20">
+                <span className="font-bold text-on-surface">{isEn ? 'Orders Total:' : 'إجمالي الطلبات:'}</span>
+                <span className="font-headline-sm text-headline-sm text-secondary font-bold dir-ltr">
+                  {invoice.ordersCost} {currencyStr}
+                </span>
+              </div>
             </div>
           )}
 
-          {/* Grand Total Box (Prominent for Customer View) */}
-          <div className="bg-surface-container-highest/90 p-space-lg rounded-2xl border-2 border-secondary/40 shadow-inner flex flex-col items-center justify-center text-center">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-              المبلغ الإجمالي المطلوب تحصيله
-            </span>
-            <div className="flex items-baseline gap-1 my-1">
-              <span className="font-display-lg text-display-lg text-secondary font-black tracking-tight">
-                {invoice.total?.toFixed(2)}
+          {/* Grand Total Big Display */}
+          <div className="bg-primary-container/20 p-space-lg rounded-2xl border border-primary/30 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="font-headline-sm text-headline-sm text-on-surface font-extrabold">
+                {isEn ? 'Total Amount Due:' : 'المبلغ المطلوب سداده:'}
               </span>
-              <span className="font-headline-md text-headline-md text-on-surface font-bold">
-                جنيه مصري
+              <span className="text-[11px] text-outline-variant mt-0.5">
+                {isEn ? 'Includes time and buffet orders' : 'شامل الوقت والمشروبات بالكامل'}
               </span>
             </div>
-            <p className="text-xs text-outline">
-              الوقت: {invoice.timeCost?.toFixed(2)} ج.م {invoice.ordersCost > 0 ? `+ الطلبات: ${invoice.ordersCost?.toFixed(2)} ج.م` : ''}
-            </p>
+            <div className="text-end dir-ltr">
+              <span className="font-display-lg text-display-lg text-primary font-black">
+                {invoice.total}
+              </span>
+              <span className="text-sm font-bold text-on-surface ms-1">
+                {currencyStr}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -197,19 +188,18 @@ export default function InvoiceModal({ invoice, onClose }) {
           <button
             type="button"
             onClick={handlePrint}
-            className="h-12 px-space-md bg-surface-container hover:bg-surface-container-highest text-on-surface font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-1.5 transition-all border border-outline-variant/30"
+            className="flex-1 h-12 bg-surface-container hover:bg-surface-container-highest text-on-surface font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-sm border border-outline-variant/30 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">print</span>
-            <span>طباعة</span>
+            <span>{isEn ? 'Print Invoice' : 'طباعة الفاتورة'}</span>
           </button>
-
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-12 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 font-bold shadow-md"
+            className="flex-1 h-12 bg-primary text-on-primary hover:brightness-110 font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-lg shadow-primary/20 font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">check_circle</span>
-            <span>تم التحصيل والإنهاء</span>
+            <span>{isEn ? 'Done & Close' : 'تم وقفل الحساب'}</span>
           </button>
         </div>
       </div>

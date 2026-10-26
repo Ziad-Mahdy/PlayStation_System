@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useDevicesStore from '../store/devicesStore';
+import useLanguageStore from '../store/languageStore';
 import DeviceCard from '../components/devices/DeviceCard';
 import StartSessionModal from '../components/devices/StartSessionModal';
 import SessionModal from '../components/devices/SessionModal';
@@ -9,6 +10,7 @@ import AdminPasswordModal from '../components/AdminPasswordModal';
 
 export default function DevicesPage() {
   const navigate = useNavigate();
+  const t = useLanguageStore((s) => s.t);
   const devices = useDevicesStore((s) => s.devices);
   const categories = useDevicesStore((s) => s.categories || []);
   const isLoading = useDevicesStore((s) => s.isLoading);
@@ -64,27 +66,27 @@ export default function DevicesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low p-space-lg rounded-2xl border border-outline-variant/30">
         <div>
           <h1 className="font-headline-xl text-headline-xl text-on-surface">
-            إدارة أجهزة الصالة
+            {t('devices_title')}
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            متابعة حالة الأجهزة، تشغيل العدادات، وإضافة طلبات ومشاريب الزبائن
+            {t('devices_subtitle')}
           </p>
         </div>
 
         {/* Quick Stats Badges */}
         <div className="flex items-center gap-space-sm flex-wrap">
           <div className="flex items-center gap-space-xs bg-surface-container-high px-space-md py-space-sm rounded-xl border border-outline-variant/30">
-            <span className="font-label-md text-label-md text-on-surface-variant">إجمالي الأجهزة:</span>
+            <span className="font-label-md text-label-md text-on-surface-variant">{t('devices_stat_total')}</span>
             <span className="font-headline-sm text-headline-sm text-primary font-bold">{stats.total}</span>
           </div>
           <div className="flex items-center gap-space-xs bg-tertiary-container/20 text-tertiary px-space-md py-space-sm rounded-xl border border-tertiary-container/30">
             <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse"></span>
-            <span className="font-label-md text-label-md">مشغول:</span>
+            <span className="font-label-md text-label-md">{t('devices_stat_busy')}</span>
             <span className="font-headline-sm text-headline-sm font-bold">{stats.busy}</span>
           </div>
           <div className="flex items-center gap-space-xs bg-secondary-container/20 text-secondary px-space-md py-space-sm rounded-xl border border-secondary-container/30">
             <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-            <span className="font-label-md text-label-md">متاح:</span>
+            <span className="font-label-md text-label-md">{t('devices_stat_free')}</span>
             <span className="font-headline-sm text-headline-sm font-bold">{stats.free}</span>
           </div>
 
@@ -95,7 +97,7 @@ export default function DevicesPage() {
             className="h-11 px-space-md bg-surface-container-high hover:bg-surface-container-highest text-secondary border border-secondary/30 rounded-xl font-label-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-            <span>فواتير وحسابات الشيفت</span>
+            <span>{t('devices_worker_accounts')}</span>
           </button>
         </div>
       </div>
@@ -112,7 +114,7 @@ export default function DevicesPage() {
                 : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
             }`}
           >
-            كل الأجهزة
+            {t('devices_filter_all')}
           </button>
 
           {/* Dynamic categories from store */}
@@ -138,7 +140,7 @@ export default function DevicesPage() {
                 : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
             }`}
           >
-            غرف VIP ⭐
+            {t('devices_filter_vip')}
           </button>
         </div>
 
@@ -154,7 +156,7 @@ export default function DevicesPage() {
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              الكل
+              {t('devices_status_all')}
             </button>
             <button
               onClick={() => setFilterStatus('busy')}
@@ -164,7 +166,7 @@ export default function DevicesPage() {
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              شغال
+              {t('devices_status_busy')}
             </button>
             <button
               onClick={() => setFilterStatus('free')}
@@ -174,7 +176,7 @@ export default function DevicesPage() {
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              فاضي
+              {t('devices_status_free')}
             </button>
           </div>
 
@@ -184,7 +186,7 @@ export default function DevicesPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="بحث برقم أو اسم الجهاز..."
+              placeholder={t('devices_search_placeholder')}
               className="w-full h-11 bg-surface-container rounded-xl pl-10 pr-space-md font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant border border-outline-variant/40 focus:border-primary outline-none transition-all"
             />
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
@@ -209,7 +211,7 @@ export default function DevicesPage() {
             progress_activity
           </span>
           <p className="font-headline-sm text-headline-sm text-on-surface">
-            جاري مزامنة الأجهزة مع قاعدة البيانات...
+            {t('devices_syncing')}
           </p>
         </div>
       ) : devices.length === 0 ? (
@@ -218,10 +220,10 @@ export default function DevicesPage() {
             <span className="material-symbols-outlined text-[36px]">sports_esports</span>
           </div>
           <h3 className="font-headline-lg text-headline-lg text-on-surface">
-            أهلاً بك في نظام الكافيه الخاص بك! 🎮
+            {t('devices_welcome_title')}
           </h3>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mt-2">
-            لم تقم بإضافة أي أجهزة حتى الآن. توجه إلى لوحة الأدمن للبدء في إضافة أجهزة الصالة وتحديد أسعار السنجل والمالتي.
+            {t('devices_welcome_desc')}
           </p>
           <button
             type="button"
@@ -229,7 +231,7 @@ export default function DevicesPage() {
             className="mt-6 px-6 h-12 bg-primary text-on-primary font-headline-sm rounded-xl hover:brightness-110 shadow-lg flex items-center gap-2 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">add_circle</span>
-            <span>إضافة أجهزة من لوحة الأدمن</span>
+            <span>{t('devices_add_from_admin')}</span>
           </button>
         </div>
       ) : filteredDevices.length === 0 ? (
@@ -238,10 +240,10 @@ export default function DevicesPage() {
             search_off
           </span>
           <h3 className="font-headline-md text-headline-md text-on-surface">
-            لا توجد أجهزة مطابقة للبحث أو الفلتر
+            {t('devices_no_results')}
           </h3>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            جرب تغيير معايير البحث أو اختيار "كل الأجهزة"
+            {t('devices_no_results_hint')}
           </p>
           <button
             onClick={() => {
@@ -251,7 +253,7 @@ export default function DevicesPage() {
             }}
             className="mt-space-md px-space-lg h-11 bg-primary-container text-on-primary-container font-label-lg rounded-xl hover:bg-primary hover:text-on-primary transition-all"
           >
-            إعادة ضبط الفلاتر
+            {t('devices_reset_filters')}
           </button>
         </div>
       ) : (
@@ -282,7 +284,7 @@ export default function DevicesPage() {
         />
       )}
 
-      {/* ── Admin Password Modal (للدخول المباشر للوحة الأدمن) ── */}
+      {/* ── Admin Password Modal ── */}
       <AdminPasswordModal
         isOpen={showAdminPasswordModal}
         onClose={() => setShowAdminPasswordModal(false)}

@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import useDevicesStore from '../../store/devicesStore';
+import useLanguageStore from '../../store/languageStore';
 import { formatTime } from './DeviceCard';
 import InvoiceModal from './InvoiceModal';
 
 export default function WorkerAccountsModal({ isOpen, onClose }) {
   const completedSessions = useDevicesStore((s) => s.completedSessions);
+  const t = useLanguageStore((s) => s.t);
+  const language = useLanguageStore((s) => s.language);
 
   // Pagination state (max 5 invoices per page)
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,10 +74,10 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
               </div>
               <div>
                 <h2 className="font-headline-md text-headline-md text-on-surface">
-                  حسابات وفواتير الشيفت
+                  {t('worker_title')}
                 </h2>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  مراجعة الفواتير المحصلة وإجمالي الدخل
+                  {t('worker_subtitle')}
                 </p>
               </div>
             </div>
@@ -91,30 +94,30 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
           <div className="p-space-lg pb-0 shrink-0">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-sm">
               <div className="bg-surface-container-low p-space-md rounded-2xl border border-secondary/30">
-                <span className="text-xs text-on-surface-variant block">إجمالي المحصل:</span>
+                <span className="text-xs text-on-surface-variant block">{t('worker_stat_total')}</span>
                 <span className="font-headline-lg text-headline-lg text-secondary font-black">
-                  {totals.total} <span className="text-xs font-normal">ج.م</span>
+                  {totals.total} <span className="text-xs font-normal">{t('card_egp')}</span>
                 </span>
               </div>
 
               <div className="bg-surface-container-low p-space-md rounded-2xl border border-primary/30">
-                <span className="text-xs text-on-surface-variant block">دخل الوقت:</span>
+                <span className="text-xs text-on-surface-variant block">{t('worker_stat_time')}</span>
                 <span className="font-headline-lg text-headline-lg text-primary font-bold">
-                  {totals.time} <span className="text-xs font-normal">ج.م</span>
+                  {totals.time} <span className="text-xs font-normal">{t('card_egp')}</span>
                 </span>
               </div>
 
               <div className="bg-surface-container-low p-space-md rounded-2xl border border-tertiary/30">
-                <span className="text-xs text-on-surface-variant block">دخل الطلبات:</span>
+                <span className="text-xs text-on-surface-variant block">{t('worker_stat_orders')}</span>
                 <span className="font-headline-lg text-headline-lg text-tertiary font-bold">
-                  {totals.orders} <span className="text-xs font-normal">ج.م</span>
+                  {totals.orders} <span className="text-xs font-normal">{t('card_egp')}</span>
                 </span>
               </div>
 
               <div className="bg-surface-container-low p-space-md rounded-2xl border border-outline-variant/30">
-                <span className="text-xs text-on-surface-variant block">عدد الفواتير:</span>
+                <span className="text-xs text-on-surface-variant block">{t('worker_stat_count')}</span>
                 <span className="font-headline-lg text-headline-lg text-on-surface font-bold">
-                  {totals.count} <span className="text-xs font-normal">فاتورة</span>
+                  {totals.count} <span className="text-xs font-normal">{t('worker_invoices_unit')}</span>
                 </span>
               </div>
             </div>
@@ -129,15 +132,15 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  placeholder="بحث باسم الجهاز أو اسم الزبون..."
-                  className="w-full h-10 bg-surface-container-low rounded-xl pl-9 pr-3 text-xs font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
+                  placeholder={t('worker_search_placeholder')}
+                  className="w-full h-10 bg-surface-container-low rounded-xl ps-9 pe-3 text-xs font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
                 />
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                <span className="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
                   search
                 </span>
               </div>
               <span className="text-xs text-outline shrink-0">
-                (يتم عرض 5 فواتير في كل صفحة)
+                {t('worker_page_hint')}
               </span>
             </div>
           </div>
@@ -149,35 +152,35 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                 <span className="material-symbols-outlined text-[44px] text-outline mb-1">
                   receipt
                 </span>
-                <p className="font-headline-sm text-headline-sm">لا توجد فواتير مسجلة</p>
+                <p className="font-headline-sm text-headline-sm">{t('worker_no_invoices')}</p>
                 <p className="font-body-sm text-body-sm text-outline mt-0.5">
-                  عند إنهاء أي جلسة ستظهر الفاتورة هنا فوراً
+                  {t('worker_no_invoices_hint')}
                 </p>
               </div>
             ) : (
               <div className="bg-surface-container-low rounded-2xl border border-outline-variant/30 overflow-hidden shadow-sm">
-                <table className="w-full text-right border-collapse text-xs sm:text-sm">
+                <table className="w-full text-start border-collapse text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-surface-container border-b border-outline-variant/20 text-on-surface-variant font-label-md">
-                      <th className="p-3">#</th>
-                      <th className="p-3">الجهاز</th>
-                      <th className="p-3">الوقت والتاريخ</th>
-                      <th className="p-3">المدة</th>
-                      <th className="p-3">الوقت</th>
-                      <th className="p-3">الطلبات</th>
-                      <th className="p-3">الإجمالي</th>
-                      <th className="p-3 text-center">إجراء</th>
+                      <th className="p-3">{t('worker_th_num')}</th>
+                      <th className="p-3">{t('worker_th_device')}</th>
+                      <th className="p-3">{t('worker_th_datetime')}</th>
+                      <th className="p-3">{t('worker_th_duration')}</th>
+                      <th className="p-3">{t('worker_th_time')}</th>
+                      <th className="p-3">{t('worker_th_orders')}</th>
+                      <th className="p-3">{t('worker_th_total')}</th>
+                      <th className="p-3 text-center">{t('worker_th_action')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10 font-body-sm">
                     {paginatedInvoices.map((inv, idx) => {
                       const endTime = new Date(inv.endTime || Date.now());
-                      const timeStr = endTime.toLocaleTimeString('ar-EG', {
+                      const timeStr = endTime.toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: true,
                       });
-                      const dateStr = endTime.toLocaleDateString('ar-EG', {
+                      const dateStr = endTime.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
                         month: 'short',
                         day: 'numeric',
                       });
@@ -193,7 +196,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                               </span>
                             )}
                             <span className="block text-[11px] text-on-surface-variant font-normal">
-                              {inv.mode === 'single' ? 'فردي' : 'جماعي'}
+                              {inv.mode === 'single' ? t('worker_single') : t('worker_multi')}
                             </span>
                           </td>
                           <td className="p-3 text-on-surface">
@@ -204,23 +207,23 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                             {formatTime(inv.durationSeconds || 0)}
                           </td>
                           <td className="p-3 text-primary font-bold">
-                            {inv.timeCost?.toFixed(2)} ج.م
+                            {inv.timeCost?.toFixed(2)} {t('card_egp')}
                           </td>
                           <td className="p-3 text-tertiary font-bold">
-                            {inv.ordersCost?.toFixed(2)} ج.م
+                            {inv.ordersCost?.toFixed(2)} {t('card_egp')}
                           </td>
                           <td className="p-3 text-secondary font-black font-headline-sm">
-                            {inv.total?.toFixed(2)} ج.م
+                            {inv.total?.toFixed(2)} {t('card_egp')}
                           </td>
                           <td className="p-3 text-center">
                             <button
                               type="button"
                               onClick={() => setPreviewInvoice(inv)}
                               className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm rounded-lg transition-colors inline-flex items-center gap-1"
-                              title="معاينة وطباعة الفاتورة"
+                              title={t('worker_view_title')}
                             >
                               <span className="material-symbols-outlined text-[16px]">visibility</span>
-                              <span>عرض</span>
+                              <span>{t('worker_view')}</span>
                             </button>
                           </td>
                         </tr>
@@ -236,8 +239,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
           {totalPages > 1 && (
             <div className="bg-surface-container-high px-space-lg py-3 flex items-center justify-between border-t border-outline-variant/20 shrink-0">
               <span className="text-xs text-on-surface-variant font-label-sm">
-                صفحة <span className="font-bold text-on-surface">{validPage}</span> من{' '}
-                <span className="font-bold text-on-surface">{totalPages}</span> (إجمالي {filteredInvoices.length} فاتورة)
+                {t('worker_page_of', validPage, totalPages, filteredInvoices.length)}
               </span>
 
               <div className="flex items-center gap-1">
@@ -247,8 +249,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   className="h-8 px-3 rounded-lg text-xs bg-surface-container text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1"
                 >
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                  <span>السابق</span>
+                  <span>{t('worker_prev')}</span>
                 </button>
 
                 {Array.from({ length: totalPages }).map((_, i) => (
@@ -272,8 +273,7 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   className="h-8 px-3 rounded-lg text-xs bg-surface-container text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1"
                 >
-                  <span>التالي</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <span>{t('worker_next')}</span>
                 </button>
               </div>
             </div>

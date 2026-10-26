@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import useLanguageStore from '../../store/languageStore';
 import toast from 'react-hot-toast';
 
 // ── Format seconds as HH:MM:SS ───────────────────
@@ -36,6 +37,8 @@ export function getDeviceIcon(type, isVIP) {
 export default function DeviceCard({ device, onOpenSession, onStartSession }) {
   const [elapsed, setElapsed] = useState(0);
   const notifiedRef = useRef(false);
+  const language = useLanguageStore((s) => s.language);
+  const isEn = language === 'en';
 
   // Live timer for busy devices
   useEffect(() => {
@@ -53,7 +56,10 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
         const targetSec = device.session.targetMinutes * 60;
         if (sec >= targetSec && !notifiedRef.current) {
           notifiedRef.current = true;
-          toast.error(`⏰ انتبه! انتهى وقت ${device.name}! يرجى مراجعة الزبون`, {
+          const msg = isEn
+            ? `⏰ Notice! Time finished for ${device.name}! Please notify customer.`
+            : `⏰ انتبه! انتهى وقت ${device.name}! يرجى مراجعة الزبون`;
+          toast.error(msg, {
             duration: 8000,
             icon: '⏰',
           });
@@ -63,10 +69,15 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [device.status, device.session?.startTime, device.session?.targetMinutes, device.session?.timeType, device.name]);
+  }, [device.status, device.session?.startTime, device.session?.targetMinutes, device.session?.timeType, device.name, isEn]);
 
   const { timeCost, ordersCost, total } = computeCosts(device, elapsed);
   const deviceIcon = getDeviceIcon(device.type, device.isVIP);
+
+  const currencyStr = isEn ? 'EGP' : 'ج.م';
+  const singleLabel = isEn ? 'Single' : 'فردي';
+  const multiLabel = isEn ? 'Multi' : 'جماعي';
+  const perHourStr = isEn ? 'hr' : 'ساعة';
 
   // ── Free device card ──────────────────────────
   if (device.status === 'free') {
@@ -92,14 +103,16 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
                 <div className="flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm mt-0.5">
                   <span className="material-symbols-outlined text-[16px]">payments</span>
                   <span>
-                    فردي: {device.singlePrice} ج.م | جماعي: {device.multiPrice} ج.م / ساعة
+                    {singleLabel}: {device.singlePrice} {currencyStr} | {multiLabel}: {device.multiPrice} {currencyStr} / {perHourStr}
                   </span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-space-xs bg-secondary-container/20 text-secondary px-space-md py-1 rounded-full shadow-sm">
               <span className="w-2 h-2 rounded-full bg-secondary"></span>
-              <span className="font-label-lg text-label-lg font-bold">فاضي</span>
+              <span className="font-label-lg text-label-lg font-bold">
+                {isEn ? 'Available' : 'فاضي'}
+              </span>
             </div>
           </div>
 
@@ -109,10 +122,10 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
               lock_open_right
             </span>
             <span className="font-headline-sm text-headline-sm text-on-surface-variant">
-              الجهاز متاح حالياً
+              {isEn ? 'Station is currently free' : 'الجهاز متاح حالياً'}
             </span>
             <span className="font-body-sm text-body-sm text-outline mt-1">
-              فردي: {device.singlePrice} ج.م • جماعي: {device.multiPrice} ج.م / ساعة
+              {singleLabel}: {device.singlePrice} {currencyStr} • {multiLabel}: {device.multiPrice} {currencyStr} / {perHourStr}
             </span>
           </div>
         </div>
@@ -120,13 +133,13 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
         {/* Start button */}
         <button
           onClick={() => onStartSession(device.id)}
-          className="w-full h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-sm transition-all transform active:scale-95 shadow-md mt-space-md"
+          className="w-full h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-sm transition-all transform active:scale-95 shadow-md mt-space-md cursor-pointer"
         >
           <span className="material-symbols-outlined text-[22px]"
             style={{ fontVariationSettings: "'FILL' 1" }}>
             play_arrow
           </span>
-          <span>ابدأ الوقت</span>
+          <span>{isEn ? 'Start Time' : 'ابدأ الوقت'}</span>
         </button>
       </div>
     );
@@ -138,6 +151,11 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
   const targetSeconds = isFixed ? (device.session.targetMinutes || 0) * 60 : 0;
   const remainingSeconds = isFixed ? Math.max(0, targetSeconds - elapsed) : 0;
   const isExpired = isFixed && elapsed >= targetSeconds;
+
+  const startTimeStr = new Date(device.session.startTime).toLocaleTimeString(
+    isEn ? 'en-US' : 'ar-EG',
+    { hour: '2-digit', minute: '2-digit', hour12: true }
+  );
 
   return (
     <div
@@ -180,20 +198,15 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
               <div className="flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm mt-0.5">
                 <span className="material-symbols-outlined text-[16px]">schedule</span>
                 <span>
-                  بدأ:{' '}
-                  {new Date(device.session.startTime).toLocaleTimeString('ar-EG', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                  })}
+                  {isEn ? 'Started: ' : 'بدأ: '}{startTimeStr}
                 </span>
                 <span className="text-outline">•</span>
-                <span>{device.session.mode === 'single' ? 'فردي' : 'جماعي'}</span>
+                <span>{device.session.mode === 'single' ? singleLabel : multiLabel}</span>
               </div>
               {device.session.customerName && (
                 <div className="flex items-center gap-1 text-xs text-secondary mt-1 font-medium">
                   <span className="material-symbols-outlined text-[14px]">person</span>
-                  <span>الزبون: {device.session.customerName}</span>
+                  <span>{isEn ? 'Guest: ' : 'الزبون: '}{device.session.customerName}</span>
                 </div>
               )}
             </div>
@@ -203,12 +216,16 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
           {isExpired ? (
             <div className="flex items-center gap-space-xs bg-error-container/40 text-error px-space-md py-1 rounded-full shadow-sm animate-bounce">
               <span className="material-symbols-outlined text-[16px]">alarm</span>
-              <span className="font-label-md text-label-md font-black">انتهى الوقت!</span>
+              <span className="font-label-md text-label-md font-black">
+                {isEn ? 'Time Up!' : 'انتهى الوقت!'}
+              </span>
             </div>
           ) : (
             <div className="flex items-center gap-space-xs bg-tertiary-container/20 text-tertiary px-space-md py-1 rounded-full shadow-sm">
               <span className="w-2 h-2 rounded-full bg-tertiary-container animate-ping"></span>
-              <span className="font-label-lg text-label-lg font-bold">شغال</span>
+              <span className="font-label-lg text-label-lg font-bold">
+                {isEn ? 'Busy' : 'شغال'}
+              </span>
             </div>
           )}
         </div>
@@ -220,7 +237,9 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
               {isFixed ? 'timer' : 'all_inclusive'}
             </span>
             <span className="font-label-sm text-label-sm font-bold">
-              {isFixed ? `وقت محدد (${device.session.targetMinutes} دقيقة)` : 'وقت مفتوح'}
+              {isFixed
+                ? (isEn ? `Fixed (${device.session.targetMinutes} min)` : `وقت محدد (${device.session.targetMinutes} دقيقة)`)
+                : (isEn ? 'Open Time' : 'وقت مفتوح')}
             </span>
           </div>
 
@@ -231,7 +250,9 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
                 {isExpired ? `+${formatTime(elapsed - targetSeconds)}` : formatTime(remainingSeconds)}
               </div>
               <span className={`text-xs font-bold mt-0.5 ${isExpired ? 'text-error' : 'text-secondary'}`}>
-                {isExpired ? 'انتهى الوقت المحدد! (وقت إضافي)' : `متبقي من المدة (منقضي ${formatTime(elapsed)})`}
+                {isExpired
+                  ? (isEn ? 'Overtime (Time Expired!)' : 'انتهى الوقت المحدد! (وقت إضافي)')
+                  : (isEn ? `Remaining (Elapsed: ${formatTime(elapsed)})` : `متبقي من المدة (منقضي ${formatTime(elapsed)})`)}
               </span>
             </div>
           ) : (
@@ -243,10 +264,12 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
           <div className="flex items-center gap-space-xs text-secondary font-label-sm text-label-sm mt-1">
             <span className="material-symbols-outlined text-[14px]">videogame_asset</span>
             <span>
-              {device.session.mode === 'single' ? 'فردي' : 'جماعي'} •{' '}
+              {device.session.mode === 'single' ? singleLabel : multiLabel} •{' '}
               {device.session.orders.length > 0
-                ? `${device.session.orders.reduce((s, o) => s + o.qty, 0)} طلبات`
-                : 'بدون طلبات'}
+                ? (isEn
+                    ? `${device.session.orders.reduce((s, o) => s + o.qty, 0)} orders`
+                    : `${device.session.orders.reduce((s, o) => s + o.qty, 0)} طلبات`)
+                : (isEn ? 'No orders' : 'بدون طلبات')}
             </span>
           </div>
         </div>
@@ -254,14 +277,18 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
         {/* Cost breakdown */}
         <div className="flex items-center justify-between px-space-xs">
           <div className="flex flex-col">
-            <span className="font-body-sm text-body-sm text-on-surface-variant">الحساب التراكمي:</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">
+              {isEn ? 'Current Total:' : 'الحساب التراكمي:'}
+            </span>
             <span className="font-label-sm text-label-sm text-outline">
-              الوقت {timeCost} + الطلبات {ordersCost} ج.م
+              {isEn
+                ? `Time: ${timeCost} + Orders: ${ordersCost} ${currencyStr}`
+                : `الوقت ${timeCost} + الطلبات ${ordersCost} ${currencyStr}`}
             </span>
           </div>
-          <div className="text-left">
+          <div className="text-left dir-ltr">
             <span className="font-label-price text-label-price text-secondary font-bold">
-              {total} ج.م
+              {total} {currencyStr}
             </span>
           </div>
         </div>
@@ -271,9 +298,13 @@ export default function DeviceCard({ device, onOpenSession, onStartSession }) {
       <div className={`mt-space-md pt-space-sm flex items-center justify-between font-label-md text-label-md px-space-md py-space-xs rounded-lg ${isExpired ? 'bg-error-container/30 text-error' : 'bg-surface-container text-primary'}`}>
         <span className="flex items-center gap-space-xs">
           <span className="material-symbols-outlined text-[18px]">touch_app</span>
-          <span>{isExpired ? 'انقر لإنهاء الجلسة أو تمديدها' : 'انقر للتفاصيل والحساب'}</span>
+          <span>
+            {isExpired
+              ? (isEn ? 'Click to checkout or extend' : 'انقر لإنهاء الجلسة أو تمديدها')
+              : (isEn ? 'Click for session details & orders' : 'انقر للتفاصيل والحساب')}
+          </span>
         </span>
-        <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">
+        <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform rtl:rotate-0 ltr:rotate-180">
           arrow_back
         </span>
       </div>

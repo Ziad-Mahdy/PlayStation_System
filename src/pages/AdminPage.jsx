@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import useDevicesStore from '../store/devicesStore';
 import useAdminStore from '../store/adminStore';
 import useAuthStore from '../store/authStore';
+import useLanguageStore from '../store/languageStore';
 import { useNavigate } from 'react-router-dom';
 import { formatTime } from '../components/devices/DeviceCard';
 import InvoiceModal from '../components/devices/InvoiceModal';
@@ -10,6 +11,8 @@ import toast from 'react-hot-toast';
 export default function AdminPage() {
   const navigate = useNavigate();
   const exitAdmin = useAuthStore((s) => s.exitAdmin);
+  const t = useLanguageStore((s) => s.t);
+  const language = useLanguageStore((s) => s.language);
 
   // Stores
   const devices = useDevicesStore((s) => s.devices);
@@ -308,21 +311,21 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-space-xs">
               <h1 className="font-headline-xl text-headline-xl text-on-surface">
-                لوحة تحكم المدير
+                {t('admin_title')}
               </h1>
               <span className="bg-primary/20 text-primary-fixed border border-primary/30 font-label-sm text-label-sm px-2 py-0.5 rounded-full">
-                صلاحيات كاملة
+                {t('admin_badge_full')}
               </span>
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              إدارة أسعار الساعات (فردي وجماعي)، منتجات المشروبات والمأكولات، ومتابعة إيرادات اليوم
+              {t('admin_subtitle')}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-space-xs text-xs bg-surface-container px-3 py-1.5 rounded-xl border border-primary/30 text-primary-fixed">
           <span className="material-symbols-outlined text-[16px]">lock_clock</span>
-          <span>جلسة مدير نشطة (تُقفل ذاتياً عند الانتقال للأجهزة)</span>
+          <span>{t('admin_active_session')}</span>
         </div>
       </div>
 
@@ -337,7 +340,7 @@ export default function AdminPage() {
           }`}
         >
           <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
-          <span>حسابات وإيرادات اليوم</span>
+          <span>{t('admin_tab_finances')}</span>
           <span className="bg-surface-container-highest/60 text-xs px-2 py-0.5 rounded-full">
             {completedSessions.length}
           </span>
@@ -352,9 +355,9 @@ export default function AdminPage() {
           }`}
         >
           <span className="material-symbols-outlined text-[20px]">sports_esports</span>
-          <span>إدارة الأجهزة والأسعار</span>
+          <span>{t('admin_tab_rates')}</span>
           <span className="bg-surface-container-highest/60 text-xs px-2 py-0.5 rounded-full">
-            {devices.length} جهاز
+            {t('admin_devices_count', devices.length)}
           </span>
         </button>
 
@@ -367,9 +370,9 @@ export default function AdminPage() {
           }`}
         >
           <span className="material-symbols-outlined text-[20px]">restaurant_menu</span>
-          <span>قائمة المنتجات والمشاريب</span>
+          <span>{t('admin_tab_products')}</span>
           <span className="bg-surface-container-highest/60 text-xs px-2 py-0.5 rounded-full">
-            {products.length} منتج
+            {t('admin_products_count', products.length)}
           </span>
         </button>
       </div>
@@ -385,72 +388,72 @@ export default function AdminPage() {
             <div className="bg-surface-container-low p-space-lg rounded-2xl border border-secondary/30 relative overflow-hidden shadow-lg">
               <div className="absolute top-0 right-0 left-0 h-1 bg-secondary"></div>
               <div className="flex items-center justify-between">
-                <span className="font-label-lg text-label-lg text-on-surface-variant">إجمالي الإيرادات اليوم</span>
+                <span className="font-label-lg text-label-lg text-on-surface-variant">{t('admin_stat_total_rev')}</span>
                 <span className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
                   <span className="material-symbols-outlined text-[24px]">payments</span>
                 </span>
               </div>
-              <div className="mt- space-sm">
+              <div className="mt-space-sm">
                 <span className="font-display-lg text-display-lg text-secondary font-black">
                   {finances.totalRevenue}
                 </span>
-                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">ج.م</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">{t('card_egp')}</span>
               </div>
-              <p className="font-body-sm text-body-sm text-outline mt-1">مجموع الوقت والمشاريب</p>
+              <p className="font-body-sm text-body-sm text-outline mt-1">{t('admin_stat_total_rev_sub')}</p>
             </div>
 
             {/* Time Revenue */}
             <div className="bg-surface-container-low p-space-lg rounded-2xl border border-primary/30 relative overflow-hidden shadow-lg">
               <div className="absolute top-0 right-0 left-0 h-1 bg-primary"></div>
               <div className="flex items-center justify-between">
-                <span className="font-label-lg text-label-lg text-on-surface-variant">إيراد وقت الأجهزة</span>
+                <span className="font-label-lg text-label-lg text-on-surface-variant">{t('admin_stat_time_rev')}</span>
                 <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span className="material-symbols-outlined text-[24px]">schedule</span>
                 </span>
               </div>
-              <div className="mt- space-sm">
+              <div className="mt-space-sm">
                 <span className="font-display-lg text-display-lg text-primary font-black">
                   {finances.timeRevenue}
                 </span>
-                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">ج.م</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">{t('card_egp')}</span>
               </div>
-              <p className="font-body-sm text-body-sm text-outline mt-1">ساعات اللعب الفعلي</p>
+              <p className="font-body-sm text-body-sm text-outline mt-1">{t('admin_stat_time_rev_sub')}</p>
             </div>
 
             {/* Orders Revenue */}
             <div className="bg-surface-container-low p-space-lg rounded-2xl border border-tertiary/30 relative overflow-hidden shadow-lg">
               <div className="absolute top-0 right-0 left-0 h-1 bg-tertiary"></div>
               <div className="flex items-center justify-between">
-                <span className="font-label-lg text-label-lg text-on-surface-variant">إيراد البوفيه والمشاريب</span>
+                <span className="font-label-lg text-label-lg text-on-surface-variant">{t('admin_stat_orders_rev')}</span>
                 <span className="w-10 h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center">
                   <span className="material-symbols-outlined text-[24px]">local_cafe</span>
                 </span>
               </div>
-              <div className="mt- space-sm">
+              <div className="mt-space-sm">
                 <span className="font-display-lg text-display-lg text-tertiary font-black">
                   {finances.ordersRevenue}
                 </span>
-                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">ج.م</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">{t('card_egp')}</span>
               </div>
-              <p className="font-body-sm text-body-sm text-outline mt-1">المبيعات الإضافية</p>
+              <p className="font-body-sm text-body-sm text-outline mt-1">{t('admin_stat_orders_rev_sub')}</p>
             </div>
 
             {/* Sessions count */}
             <div className="bg-surface-container-low p-space-lg rounded-2xl border border-outline-variant/30 relative overflow-hidden shadow-lg">
               <div className="absolute top-0 right-0 left-0 h-1 bg-surface-variant"></div>
               <div className="flex items-center justify-between">
-                <span className="font-label-lg text-label-lg text-on-surface-variant">الجلسات المكتملة</span>
+                <span className="font-label-lg text-label-lg text-on-surface-variant">{t('admin_stat_completed')}</span>
                 <span className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface flex items-center justify-center">
                   <span className="material-symbols-outlined text-[24px]">done_all</span>
                 </span>
               </div>
-              <div className="mt- space-sm">
+              <div className="mt-space-sm">
                 <span className="font-display-lg text-display-lg text-on-surface font-black">
                   {finances.sessionsCount}
                 </span>
-                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">جلسة</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface mr-1">{t('worker_invoices_unit')}</span>
               </div>
-              <p className="font-body-sm text-body-sm text-outline mt-1">تمت محاسبتها وإغلاقها</p>
+              <p className="font-body-sm text-body-sm text-outline mt-1">{t('admin_stat_completed_sub')}</p>
             </div>
           </div>
 
@@ -459,10 +462,10 @@ export default function AdminPage() {
             <div className="p-space-lg border-b border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-md">
               <div>
                 <h3 className="font-headline-md text-headline-md text-on-surface">
-                  سجل الفواتير والجلسات المنتهية
+                  {t('admin_finances_history')}
                 </h3>
                 <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-                  تفاصيل كل طاولة/جهاز تم إنهاء جلسته وحسابه اليوم
+                  {t('admin_finances_history_sub')}
                 </p>
               </div>
 
@@ -475,10 +478,10 @@ export default function AdminPage() {
                       setSessionSearch(e.target.value);
                       setAdminSessionPage(1);
                     }}
-                    placeholder="بحث بالجهاز أو اسم الزبون..."
-                    className="w-full h-10 bg-surface-container rounded-xl pl-8 pr-3 font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
+                    placeholder={t('admin_search_invoices')}
+                    className="w-full h-10 bg-surface-container rounded-xl ps-8 pe-3 font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
                   />
-                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                  <span className="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
                     search
                   </span>
                 </div>
@@ -489,7 +492,7 @@ export default function AdminPage() {
                     className="h-10 px-space-md bg-error-container/20 hover:bg-error-container text-error hover:text-on-error-container font-label-md rounded-xl transition-all border border-error/30 flex items-center gap-1 shrink-0"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-                    <span>تصفير الحسابات</span>
+                    <span>{t('admin_clear_today')}</span>
                   </button>
                 )}
               </div>
@@ -500,38 +503,38 @@ export default function AdminPage() {
                 <span className="material-symbols-outlined text-[48px] text-outline mb-2">
                   receipt_long
                 </span>
-                <p className="font-headline-sm text-headline-sm">لا توجد جلسات مكتملة حتى الآن</p>
+                <p className="font-headline-sm text-headline-sm">{t('worker_no_invoices')}</p>
                 <p className="font-body-sm text-body-sm text-outline mt-1">
-                  عندما ينهي العامل أي جلسة من صفحة الأجهزة ستظهر الفاتورة هنا فوراً
+                  {t('worker_no_invoices_hint')}
                 </p>
               </div>
             ) : (
               <div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-right border-collapse">
+                  <table className="w-full text-start border-collapse">
                     <thead>
                       <tr className="bg-surface-container border-b border-outline-variant/20 text-on-surface-variant font-label-md text-label-md">
-                        <th className="p-space-md">#</th>
-                        <th className="p-space-md">الجهاز</th>
-                        <th className="p-space-md">التاريخ والوقت</th>
-                        <th className="p-space-md">النوع</th>
-                        <th className="p-space-md">المدة</th>
-                        <th className="p-space-md">الوقت</th>
-                        <th className="p-space-md">الطلبات</th>
-                        <th className="p-space-md">الإجمالي</th>
-                        <th className="p-space-md text-center">الفاتورة</th>
+                        <th className="p-space-md">{t('worker_th_num')}</th>
+                        <th className="p-space-md">{t('worker_th_device')}</th>
+                        <th className="p-space-md">{t('worker_th_datetime')}</th>
+                        <th className="p-space-md">{t('invoice_type')}</th>
+                        <th className="p-space-md">{t('worker_th_duration')}</th>
+                        <th className="p-space-md">{t('worker_th_time')}</th>
+                        <th className="p-space-md">{t('worker_th_orders')}</th>
+                        <th className="p-space-md">{t('worker_th_total')}</th>
+                        <th className="p-space-md text-center">{t('worker_th_action')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/10 font-body-md text-body-md">
                       {paginatedSessions.map((session, idx) => {
                         const endTime = new Date(session.endTime || Date.now());
-                        const timeStr = endTime.toLocaleTimeString('ar-EG', {
+                        const timeStr = endTime.toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', {
                           hour: '2-digit',
                           minute: '2-digit',
                           second: '2-digit',
                           hour12: true,
                         });
-                        const dateStr = endTime.toLocaleDateString('ar-EG', {
+                        const dateStr = endTime.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
                           weekday: 'short',
                           year: 'numeric',
                           month: 'short',
@@ -574,20 +577,20 @@ export default function AdminPage() {
                                     : 'bg-secondary-container/20 text-secondary'
                                 }`}
                               >
-                                {session.mode === 'single' ? 'فردي' : 'جماعي'}
+                                {session.mode === 'single' ? t('worker_single') : t('worker_multi')}
                               </span>
                             </td>
                             <td className="p-space-md text-on-surface-variant font-mono">
                               {formatTime(session.durationSeconds || 0)}
                             </td>
                             <td className="p-space-md text-primary font-bold">
-                              {session.timeCost?.toFixed(2)} ج.م
+                              {session.timeCost?.toFixed(2)} {t('card_egp')}
                             </td>
                             <td className="p-space-md text-tertiary font-bold">
-                              {session.ordersCost?.toFixed(2)} ج.م
+                              {session.ordersCost?.toFixed(2)} {t('card_egp')}
                             </td>
                             <td className="p-space-md text-secondary font-extrabold text-headline-sm">
-                              {session.total?.toFixed(2)} ج.م
+                              {session.total?.toFixed(2)} {t('card_egp')}
                             </td>
                             <td className="p-space-md text-center">
                               <button
@@ -596,7 +599,7 @@ export default function AdminPage() {
                                 className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm rounded-lg transition-colors inline-flex items-center gap-1 border border-outline-variant/30"
                               >
                                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-                                <span>عرض</span>
+                                <span>{t('worker_view')}</span>
                               </button>
                             </td>
                           </tr>
@@ -610,8 +613,7 @@ export default function AdminPage() {
                 {totalSessionPages > 1 && (
                   <div className="bg-surface-container px-space-md py-3 flex items-center justify-between border-t border-outline-variant/20">
                     <span className="text-xs text-on-surface-variant font-label-sm">
-                      صفحة <span className="font-bold text-on-surface">{validSessionPage}</span> من{' '}
-                      <span className="font-bold text-on-surface">{totalSessionPages}</span> (إجمالي {filteredSessions.length} فاتورة)
+                      {t('worker_page_of', validSessionPage, totalSessionPages, filteredSessions.length)}
                     </span>
 
                     <div className="flex items-center gap-1">
@@ -621,8 +623,7 @@ export default function AdminPage() {
                         onClick={() => setAdminSessionPage((p) => Math.max(1, p - 1))}
                         className="h-8 px-3 rounded-lg text-xs bg-surface-container-high text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1"
                       >
-                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                        <span>السابق</span>
+                        <span>{t('worker_prev')}</span>
                       </button>
 
                       {Array.from({ length: totalSessionPages }).map((_, i) => (
@@ -646,8 +647,7 @@ export default function AdminPage() {
                         onClick={() => setAdminSessionPage((p) => Math.min(totalSessionPages, p + 1))}
                         className="h-8 px-3 rounded-lg text-xs bg-surface-container-high text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1"
                       >
-                        <span>التالي</span>
-                        <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                        <span>{t('worker_next')}</span>
                       </button>
                     </div>
                   </div>
@@ -689,7 +689,7 @@ export default function AdminPage() {
                 className="w-full sm:w-auto h-11 px-space-lg bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-md transform active:scale-95 shrink-0"
               >
                 <span className="material-symbols-outlined text-[20px]">add_circle</span>
-                <span>إضافة جهاز جديد</span>
+                <span>{t('admin_add_device')}</span>
               </button>
             </div>
           </div>
