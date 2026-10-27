@@ -187,23 +187,23 @@ export default function DevicesPage() {
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-72 md:w-80 lg:w-96">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('devices_search_placeholder')}
-              className="w-full h-10 sm:h-11 bg-surface-container rounded-xl ps-9 sm:ps-10 pe-space-md text-xs sm:text-body-md text-on-surface placeholder:text-on-surface-variant border border-outline-variant/40 focus:border-primary outline-none transition-all"
+              className="w-full h-11 sm:h-12 bg-surface-container rounded-xl ps-11 sm:ps-12 pe-10 sm:pe-11 text-sm sm:text-base text-on-surface placeholder:text-on-surface-variant placeholder:text-xs sm:placeholder:text-sm border border-outline-variant/40 focus:border-primary outline-none transition-all shadow-inner"
             />
-            <span className="material-symbols-outlined absolute start-2.5 sm:start-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] sm:text-[20px]">
+            <span className="material-symbols-outlined absolute start-3 sm:start-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] sm:text-[22px] pointer-events-none">
               search
             </span>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer"
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer p-1 rounded-full hover:bg-surface-container-high transition-colors"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             )}
           </div>

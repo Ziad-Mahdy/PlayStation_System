@@ -471,7 +471,7 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-space-sm w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-56">
+                <div className="relative flex-1 sm:w-72 md:w-80">
                   <input
                     type="text"
                     value={sessionSearch}
@@ -480,9 +480,9 @@ export default function AdminPage() {
                       setAdminSessionPage(1);
                     }}
                     placeholder={t('admin_search_invoices')}
-                    className="w-full h-10 bg-surface-container rounded-xl ps-8 pe-3 font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary text-xs sm:text-sm"
+                    className="w-full h-11 bg-surface-container rounded-xl ps-10 sm:ps-11 pe-4 font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary text-xs sm:text-sm placeholder:text-on-surface-variant transition-all shadow-inner"
                   />
-                  <span className="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                  <span className="material-symbols-outlined absolute start-3 sm:start-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
                     search
                   </span>
                 </div>

@@ -133,9 +133,9 @@ export default function WorkerAccountsModal({ isOpen, onClose }) {
                     setCurrentPage(1);
                   }}
                   placeholder={t('worker_search_placeholder')}
-                  className="w-full h-9 sm:h-10 bg-surface-container-low rounded-xl ps-9 pe-3 text-xs font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary"
+                  className="w-full h-10 sm:h-11 bg-surface-container-low rounded-xl ps-10 sm:ps-11 pe-4 text-xs sm:text-sm font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary transition-all shadow-inner"
                 />
-                <span className="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                <span className="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] sm:text-[20px] pointer-events-none">
                   search
                 </span>
               </div>
