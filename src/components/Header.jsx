@@ -5,6 +5,7 @@ import useSubscriptionStore from '../store/subscriptionStore';
 import useLanguageStore from '../store/languageStore';
 import AdminPasswordModal from './AdminPasswordModal';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { showConfirm } from '../lib/swal';
 
 // ── Subscription Countdown Timer Component ─────────
 function SubscriptionCountdown({ expiresAt }) {
@@ -137,8 +138,17 @@ export default function Header() {
     setShowPasswordModal(true);
   };
 
-  const handleLogout = () => {
-    if (window.confirm(t('header_logout_confirm'))) {
+  const handleLogout = async () => {
+    const isEn = language === 'en';
+    const confirmed = await showConfirm({
+      title: isEn ? 'Logout Confirmation' : 'تأكيد تسجيل الخروج',
+      text: t('header_logout_confirm'),
+      confirmButtonText: isEn ? 'Yes, Logout' : 'نعم، خروج',
+      cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+      icon: 'question',
+      isDanger: true,
+    });
+    if (confirmed) {
       logoutClient();
       navigate('/login');
     }

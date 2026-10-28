@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSubscriptionStore from '../store/subscriptionStore';
 import toast from 'react-hot-toast';
+import { showConfirm } from '../lib/swal';
 
 // Helper to generate a clean random license code
 const generateCode = () => {
@@ -167,9 +168,17 @@ export default function DeveloperPanel() {
 
   // Handle Delete
   const handleDelete = async (sub) => {
-    if (window.confirm(`هل أنت متأكد من حذف المشترك (${sub.client_name} - ${sub.shop_name})؟ سيتم إيقاف الكود وطرده فوراً.`)) {
-      const ok = await deleteSubscriber(sub.id);
-      if (ok) {
+    const ok = await showConfirm({
+      title: 'حذف المشترك نهائياً؟',
+      text: `هل أنت متأكد من حذف المشترك (${sub.client_name} - ${sub.shop_name})؟ سيتم إيقاف الكود وحذفه فوراً.`,
+      confirmButtonText: 'نعم، حذف المشترك',
+      cancelButtonText: 'إلغاء',
+      icon: 'error',
+      isDanger: true,
+    });
+    if (ok) {
+      const deleted = await deleteSubscriber(sub.id);
+      if (deleted) {
         toast.success('تم حذف المشترك بنجاح');
       } else {
         toast.error('فشل حذف المشترك');
@@ -179,9 +188,17 @@ export default function DeveloperPanel() {
 
   // Handle Reset Device Binding
   const handleResetDevice = async (sub) => {
-    if (window.confirm(`هل تريد فك ربط الكود بجهاز (${sub.client_name})؟ سيتمكن من تسجيل الدخول من جهاز كمبيوتر جديد.`)) {
-      const ok = await resetDeviceBinding(sub.id);
-      if (ok) {
+    const ok = await showConfirm({
+      title: 'فك ربط الجهاز (Hardware Binding)؟',
+      text: `هل تريد فك ربط الكود بجهاز المشترك (${sub.client_name})؟ سيتمكن المشترك الآن من تسجيل الدخول من جهاز كمبيوتر جديد.`,
+      confirmButtonText: 'نعم، فك الربط',
+      cancelButtonText: 'إلغاء',
+      icon: 'question',
+      isDanger: false,
+    });
+    if (ok) {
+      const resetOk = await resetDeviceBinding(sub.id);
+      if (resetOk) {
         toast.success('تم فك ربط الجهاز بنجاح! يمكن للعميل الآن الدخول من جهاز جديد 🔓');
       } else {
         toast.error('فشل فك ربط الجهاز');
@@ -248,9 +265,19 @@ export default function DeveloperPanel() {
           </button>
 
           <button
-            onClick={() => {
-              logoutDev();
-              navigate('/login');
+            onClick={async () => {
+              const ok = await showConfirm({
+                title: 'تسجيل خروج المطور؟',
+                text: 'هل أنت متأكد من تسجيل الخروج من لوحة تحكم المطور؟',
+                confirmButtonText: 'نعم، خروج',
+                cancelButtonText: 'إلغاء',
+                icon: 'question',
+                isDanger: true,
+              });
+              if (ok) {
+                logoutDev();
+                navigate('/login');
+              }
             }}
             className="flex-1 sm:flex-initial h-10 sm:h-11 px-3 sm:px-4 rounded-xl bg-error/15 text-error font-label-md text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-error/25 border border-error/30 transition-all cursor-pointer"
           >

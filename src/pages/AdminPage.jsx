@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatTime } from '../components/devices/DeviceCard';
 import InvoiceModal from '../components/devices/InvoiceModal';
 import toast from 'react-hot-toast';
+import { showConfirm } from '../lib/swal';
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -165,10 +166,20 @@ export default function AdminPage() {
     setIsProductModalOpen(true);
   };
 
-  const handleDeleteProductClick = (id, name) => {
-    if (window.confirm(`هل أنت متأكد من حذف "${name}"؟`)) {
+  const handleDeleteProductClick = async (id, name) => {
+    const ok = await showConfirm({
+      title: isEn ? 'Delete Product?' : 'حذف المنتج؟',
+      text: isEn
+        ? `Are you sure you want to delete "${name}"?`
+        : `هل أنت متأكد من حذف "${name}" من قائمة المنتجات؟`,
+      confirmButtonText: isEn ? 'Yes, Delete' : 'نعم، حذف',
+      cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (ok) {
       deleteProduct(id);
-      toast.success('تم حذف المنتج');
+      toast.success(isEn ? 'Product deleted successfully' : 'تم حذف المنتج');
     }
   };
 
@@ -222,19 +233,35 @@ export default function AdminPage() {
   };
 
   // ── Handle Delete Device ──
-  const handleDeleteDeviceClick = (device) => {
+  const handleDeleteDeviceClick = async (device) => {
     if (device.status === 'busy') {
-      const confirmBusy = window.confirm(
-        `تنبيه: "${device.name}" يعمل حالياً ولديه وقت شغال! هل تريد بالرغم من ذلك حذفه وإلغاء جلسته؟`
-      );
-      if (!confirmBusy) return;
+      const ok = await showConfirm({
+        title: isEn ? 'Warning: Station is Active!' : 'تنبيه: الجهاز يعمل حالياً!',
+        text: isEn
+          ? `"${device.name}" is currently active with a running session. Deleting it will terminate and discard its current session. Are you sure?`
+          : `تنبيه: جهاز "${device.name}" يعمل حالياً ولديه وقت شغال! حذفه سيؤدي لإلغاء جلسته الحالية فوراً. هل تريد المتابعة؟`,
+        confirmButtonText: isEn ? 'Yes, Delete Station' : 'نعم، احذف الجهاز',
+        cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+        icon: 'error',
+        isDanger: true,
+      });
+      if (!ok) return;
     } else {
-      const confirmFree = window.confirm(`هل أنت متأكد من حذف "${device.name}" من النظام؟`);
-      if (!confirmFree) return;
+      const ok = await showConfirm({
+        title: isEn ? 'Delete Station?' : 'حذف الجهاز؟',
+        text: isEn
+          ? `Are you sure you want to remove "${device.name}" from the system?`
+          : `هل أنت متأكد من حذف "${device.name}" نهائياً من النظام؟`,
+        confirmButtonText: isEn ? 'Yes, Delete' : 'نعم، حذف',
+        cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+        icon: 'warning',
+        isDanger: true,
+      });
+      if (!ok) return;
     }
 
     deleteDevice(device.id);
-    toast.success(`تم حذف "${device.name}" من النظام`);
+    toast.success(isEn ? `Station "${device.name}" deleted` : `تم حذف "${device.name}" من النظام`);
   };
 
   // ── Handle Categories (Add / Delete) ──
@@ -251,10 +278,20 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteCategoryClick = (catName) => {
-    if (window.confirm(`هل أنت متأكد من حذف قسم "${catName}"؟`)) {
+  const handleDeleteCategoryClick = async (catName) => {
+    const ok = await showConfirm({
+      title: isEn ? 'Delete Category?' : 'حذف القسم؟',
+      text: isEn
+        ? `Are you sure you want to delete category "${catName}"?`
+        : `هل أنت متأكد من حذف قسم "${catName}"؟`,
+      confirmButtonText: isEn ? 'Yes, Delete' : 'نعم، حذف',
+      cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (ok) {
       deleteCategory(catName);
-      toast.success(`تم حذف قسم "${catName}"`);
+      toast.success(isEn ? `Category "${catName}" deleted` : `تم حذف قسم "${catName}"`);
     }
   };
 
@@ -289,10 +326,20 @@ export default function AdminPage() {
     }));
   };
 
-  const handleClearSessions = () => {
-    if (window.confirm('تحذير: هل أنت متأكد من مسح جميع سجلات وفواتير اليوم المقفلة؟')) {
+  const handleClearSessions = async () => {
+    const ok = await showConfirm({
+      title: isEn ? 'Clear Today\'s Shift Invoices?' : 'مسح فواتير اليوم؟',
+      text: isEn
+        ? 'Warning: Are you sure you want to clear and reset all today\'s closed shift invoices? This action cannot be undone.'
+        : 'تحذير: هل أنت متأكد من مسح جميع سجلات وفواتير اليوم المقفلة؟ لا يمكن التراجع عن هذا الإجراء.',
+      confirmButtonText: isEn ? 'Yes, Clear All' : 'نعم، مسح السجلات',
+      cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (ok) {
       clearCompletedSessions();
-      toast.success('تم تصفير حسابات اليوم');
+      toast.success(isEn ? 'Today\'s shift invoices cleared' : 'تم تصفير حسابات اليوم');
     }
   };
 
