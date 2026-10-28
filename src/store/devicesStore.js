@@ -139,20 +139,9 @@ const useDevicesStore = create((set, get) => ({
           }
           return dbDev;
         });
-      } else if (currentDevices && currentDevices.length > 0) {
-        // لو السيرفر لسه ملوش أجهزة ولكن الكاش المحلي به أجهزة: نحافظ عليها ونرفعها للسيرفر فوراً
-        mergedDevices = currentDevices;
-        for (const dev of currentDevices) {
-          supabaseService.insertDevice(dev, identifier, client?.phone).then((created) => {
-            if (created && created.id) {
-              set((state) => ({
-                devices: state.devices.map((d) => (d.name === dev.name ? { ...d, id: created.id } : d)),
-              }));
-              saveDevicesCache(get().devices);
-            }
-          });
-        }
       } else {
+        // إذا كانت قاعدة البيانات فارغة (المشترك حذف أجهزته أو مستخدم جديد بدون أجهزة):
+        // نعتمد مصفوفة فارغة ولا نعيد رفع أي جهاز محذوف إطلاقاً!
         mergedDevices = [];
       }
 
@@ -211,9 +200,7 @@ const useDevicesStore = create((set, get) => ({
     );
     if (exists) return false;
 
-    const tempId = Date.now();
-    const newDevice = {
-      id: tempId,
+    const payload = {
       name: nameTrimmed || `جهاز جديد`,
       type: deviceData.type || 'PlayStation 5',
       isVIP: Boolean(deviceData.isVIP),
@@ -223,28 +210,60 @@ const useDevicesStore = create((set, get) => ({
       session: null,
     };
 
-    const updatedDevices = [...get().devices, newDevice];
-    set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
-
     if (identifier) {
-      const created = await supabaseService.insertDevice(newDevice, identifier, client?.phone);
+      const created = await supabaseService.insertDevice(payload, identifier, client?.phone);
       if (created && created.id) {
-        const withRealId = get().devices.map((d) => (d.id === tempId ? { ...d, id: created.id } : d));
-        set({ devices: withRealId });
-        saveDevicesCache(withRealId);
+        const newDevice = {
+          id: created.id,
+          name: created.name,
+          type: created.type,
+          isVIP: Boolean(created.is_vip ?? deviceData.isVIP),
+          singlePrice: parseFloat(created.single_price ?? deviceData.singlePrice) || 45,
+          multiPrice: parseFloat(created.multi_price ?? deviceData.multiPrice) || 35,
+          status: created.status || 'free',
+          session: created.session || null,
+        };
+        const updatedDevices = [
+          ...get().devices.filter((d) => d.id !== created.id && d.name !== newDevice.name),
+          newDevice,
+        ];
+        set({ devices: updatedDevices });
+        saveDevicesCache(updatedDevices);
+        return true;
       }
     }
 
+    const tempId = Date.now();
+    const fallbackDevice = { id: tempId, ...payload };
+    const updatedDevices = [...get().devices, fallbackDevice];
+    set({ devices: updatedDevices });
+    saveDevicesCache(updatedDevices);
     return true;
   },
 
   // ── حذف جهاز ──
-  deleteDevice: (deviceId) => {
-    const updatedDevices = get().devices.filter((d) => d.id !== deviceId);
+  deleteDevice: async (deviceId, deviceName = null) => {
+    const client = getClientSession();
+    const identifier = client?.code || client?.phone;
+
+    // 1. تحديد الجهاز المستهدف
+    const target = get().devices.find(
+      (d) => d.id === deviceId || (deviceName && d.name === deviceName)
+    );
+    const targetId = target?.id || deviceId;
+    const targetName = target?.name || deviceName;
+
+    // 2. حذفه من الـ state والكاش المحلي فوراً لمنع ظهوره
+    const updatedDevices = get().devices.filter(
+      (d) => d.id !== targetId && d.name !== targetName
+    );
     set({ devices: updatedDevices });
     saveDevicesCache(updatedDevices);
-    supabaseService.deleteDevice(deviceId);
+
+    // 3. حذفه نهائياً من قاعدة بيانات Supabase والتأكد من نجاح الحذف
+    if (identifier) {
+      await supabaseService.deleteDevice(targetId, targetName, identifier, client?.phone);
+    }
   },
 
   // ── بدء جلسة جديدة على جهاز (عداد حي مستمر عبر الخروج والتحديث) ──

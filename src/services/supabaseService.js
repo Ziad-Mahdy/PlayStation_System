@@ -115,11 +115,20 @@ export const supabaseService = {
     }
   },
 
-  async deleteDevice(id) {
-    if (!isSupabaseConfigured || !id) return;
+  async deleteDevice(id, name = null, identifier = null, phone = null) {
+    if (!isSupabaseConfigured) return;
     try {
-      const { error } = await supabase.from('devices').delete().eq('id', id);
-      if (error) console.error('Error deleting device:', error);
+      if (id && typeof id === 'number' && id < 1000000000000) {
+        await supabase.from('devices').delete().eq('id', id);
+      }
+      if (name && identifier) {
+        const clientPhone = phone || identifier;
+        await supabase
+          .from('devices')
+          .delete()
+          .eq('name', name)
+          .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone}`);
+      }
     } catch (err) {
       console.error('deleteDevice exception:', err);
     }

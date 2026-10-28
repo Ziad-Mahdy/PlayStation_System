@@ -184,7 +184,7 @@ export default function AdminPage() {
   };
 
   // ── Handle Add Device ──
-  const handleAddDeviceSubmit = (e) => {
+  const handleAddDeviceSubmit = async (e) => {
     e.preventDefault();
     const trimmedName = newDeviceForm.name.trim();
     if (!trimmedName) {
@@ -208,7 +208,7 @@ export default function AdminPage() {
       return;
     }
 
-    const ok = addDevice({
+    const ok = await addDevice({
       name: trimmedName,
       type: newDeviceForm.type,
       isVIP: newDeviceForm.isVIP,
@@ -260,7 +260,7 @@ export default function AdminPage() {
       if (!ok) return;
     }
 
-    deleteDevice(device.id);
+    await deleteDevice(device.id, device.name);
     toast.success(isEn ? `Station "${device.name}" deleted` : `تم حذف "${device.name}" من النظام`);
   };
 
