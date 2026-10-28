@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { subscriptionService } from '../services/subscriptionService';
 
 // بيانات تسجيل دخول المطور السرية (يمكن تعيينها من .env أو تغييرها هنا)
-const DEV_PHONE = (import.meta.env.VITE_DEV_PHONE || '01000000000').trim();
+const DEV_PHONE = (import.meta.env.VITE_DEV_PHONE || '135635').trim();
 const DEV_CODE = (import.meta.env.VITE_DEV_CODE || import.meta.env.VITE_DEV_PASSWORD || 'Mahdy@111').trim();
 
 // استعادة جلسة الكلاينت المخزنة في المتصفح إن وجدت
