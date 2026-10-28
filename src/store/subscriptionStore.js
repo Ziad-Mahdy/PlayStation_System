@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { subscriptionService } from '../services/subscriptionService';
 
-// Default Master Developer Password (يمكن تغييرها أو وضعها في .env)
-const DEV_MASTER_PASSWORD = import.meta.env.VITE_DEV_PASSWORD || 'Mahdy@111';
+// بيانات تسجيل دخول المطور السرية (يمكن تعيينها من .env أو تغييرها هنا)
+const DEV_PHONE = (import.meta.env.VITE_DEV_PHONE || '01000000000').trim();
+const DEV_CODE = (import.meta.env.VITE_DEV_CODE || import.meta.env.VITE_DEV_PASSWORD || 'Mahdy@111').trim();
 
 // استعادة جلسة الكلاينت المخزنة في المتصفح إن وجدت
 const getSavedClient = () => {
@@ -92,8 +93,16 @@ const useSubscriptionStore = create((set, get) => ({
   },
 
   // ── Developer Actions ──
-  loginDev: (password) => {
-    if (password === DEV_MASTER_PASSWORD) {
+  loginDev: (phone, code) => {
+    const cleanPhone = (phone || '').trim();
+    const cleanCode = (code || '').trim();
+
+    const phoneMatches = cleanPhone === DEV_PHONE;
+    const codeMatches =
+      cleanCode === DEV_CODE ||
+      cleanCode.toUpperCase() === DEV_CODE.toUpperCase();
+
+    if (phoneMatches && codeMatches) {
       sessionStorage.setItem('playstation_dev_session', 'true');
       set({ isDevLoggedIn: true });
       return true;

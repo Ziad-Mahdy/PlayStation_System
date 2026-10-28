@@ -19,10 +19,11 @@ function AdminGuard({ children }) {
   return children;
 }
 
-// ── Guard: حماية مسار الكلاينت (يلزم تسجيل الدخول بكود اشتراك) ──────────
+// ── Guard: حماية مسار الكلاينت (يلزم تسجيل الدخول بكود اشتراك أو كمطور) ──────────
 function ClientGuard({ children }) {
   const isClientLoggedIn = useSubscriptionStore((s) => s.isClientLoggedIn);
-  if (!isClientLoggedIn) return <Navigate to="/login" replace />;
+  const isDevLoggedIn = useSubscriptionStore((s) => s.isDevLoggedIn);
+  if (!isClientLoggedIn && !isDevLoggedIn) return <Navigate to="/login" replace />;
   return children;
 }
 

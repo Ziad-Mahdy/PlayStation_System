@@ -18,11 +18,6 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
 
-  // Developer modal
-  const [showDevModal, setShowDevModal] = useState(false);
-  const [devPassword, setDevPassword] = useState('');
-  const [devError, setDevError] = useState('');
-
   const isEn = language === 'en';
 
   const handleClientSubmit = async (e) => {
@@ -32,6 +27,15 @@ export default function LoginPage() {
       return;
     }
 
+    // 1. فحص دخول المطور أولاً برقم الهاتف والكود السري المخصص
+    const isDev = loginDev(phone, code);
+    if (isDev) {
+      toast.success(isEn ? 'Welcome Developer to the Control Center 🛠️' : 'مرحباً بك يا مطور في لوحة التحكم المركزية 🛠️');
+      navigate('/dev-panel');
+      return;
+    }
+
+    // 2. تسجيل دخول الكلاينت العادي عبر اشتراكات Supabase
     const res = await loginClient(phone, code);
     if (res.success) {
       if (res.isNewActivation) {
@@ -42,19 +46,6 @@ export default function LoginPage() {
       navigate('/');
     } else {
       toast.error(res.message || (isEn ? 'Login failed' : 'فشل تسجيل الدخول'));
-    }
-  };
-
-  const handleDevSubmit = (e) => {
-    e.preventDefault();
-    setDevError('');
-    const success = loginDev(devPassword);
-    if (success) {
-      toast.success(isEn ? 'Welcome Developer to the Control Center' : 'مرحباً بك يا مطور في لوحة التحكم المركزية');
-      setShowDevModal(false);
-      navigate('/dev-panel');
-    } else {
-      setDevError(isEn ? 'Incorrect Developer Password' : 'كلمة مرور المطور غير صحيحة');
     }
   };
 
@@ -130,8 +121,8 @@ export default function LoginPage() {
               type="text"
               placeholder="PS-XXXX-XXXX"
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-center uppercase tracking-widest placeholder:tracking-normal placeholder:text-outline/50 transition-all font-mono font-bold text-sm sm:text-base"
+              onChange={(e) => setCode(e.target.value)}
+              className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-center tracking-widest placeholder:tracking-normal placeholder:text-outline/50 transition-all font-mono font-bold text-sm sm:text-base"
               required
             />
             <p className="text-[11px] sm:text-[12px] text-on-surface-variant/80 mt-0.5">
@@ -160,79 +151,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Divider & Developer Portal Trigger */}
-        <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowDevModal(true)}
-            className="text-xs text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-surface-container cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">terminal</span>
-            <span>{t('login_dev_btn')}</span>
-          </button>
-        </div>
       </div>
-
-      {/* Developer Master Login Modal */}
-      {showDevModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="w-full max-w-sm bg-surface-container-high border border-outline-variant/40 rounded-2xl p-4 sm:p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-primary">
-                <span className="material-symbols-outlined text-[24px]">shield_person</span>
-                <h3 className="font-headline-sm text-sm sm:text-headline-sm">
-                  {isEn ? 'Developer Login' : 'دخول المطور'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDevModal(false);
-                  setDevError('');
-                }}
-                className="text-on-surface-variant hover:text-on-surface p-1 rounded-lg"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleDevSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-on-surface-variant">
-                  {isEn ? 'Developer Master Password' : 'كلمة مرور المطور الرئيسية'}
-                </label>
-                <input
-                  type="password"
-                  autoFocus
-                  placeholder="Developer Master Password"
-                  value={devPassword}
-                  onChange={(e) => setDevPassword(e.target.value)}
-                  className="h-10 sm:h-11 px-3 rounded-xl bg-surface-container border border-outline-variant/50 text-on-surface focus:outline-none focus:border-primary text-center font-mono text-sm"
-                  required
-                />
-                {devError && <p className="text-xs text-error mt-1">{devError}</p>}
-              </div>
-
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDevModal(false)}
-                  className="flex-1 h-10 rounded-xl bg-surface-container text-on-surface-variant font-label-md text-xs sm:text-sm hover:bg-surface-container-highest transition-all"
-                >
-                  {isEn ? 'Cancel' : 'إلغاء'}
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 h-10 rounded-xl bg-primary text-on-primary font-label-md text-xs sm:text-sm hover:brightness-110 transition-all"
-                >
-                  {isEn ? 'Login' : 'دخول'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
