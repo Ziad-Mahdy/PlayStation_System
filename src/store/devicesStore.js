@@ -124,24 +124,8 @@ const useDevicesStore = create((set, get) => ({
 
       let mergedDevices = [];
       if (dbDevices && dbDevices.length > 0) {
-        // ندمج بيانات السيرفر مع الجلسات الشغالة حالياً في الكاش لضمان عدم توقف أو تصفير العداد
-        mergedDevices = dbDevices.map((dbDev) => {
-          const localMatch = currentDevices.find((ld) => ld.id === dbDev.id || ld.name === dbDev.name);
-          if (localMatch && localMatch.status === 'busy' && localMatch.session?.startTime) {
-            // إذا كان الجهاز يعمل محلياً، نحافظ على توقيت البدء ونحدث السيرفر
-            if (!dbDev.session || dbDev.status !== 'busy') {
-              supabaseService.updateDevice(dbDev.id, {
-                status: 'busy',
-                session: localMatch.session,
-              });
-              return { ...dbDev, status: 'busy', session: localMatch.session };
-            }
-          }
-          return dbDev;
-        });
+        mergedDevices = dbDevices;
       } else {
-        // إذا كانت قاعدة البيانات فارغة (المشترك حذف أجهزته أو مستخدم جديد بدون أجهزة):
-        // نعتمد مصفوفة فارغة ولا نعيد رفع أي جهاز محذوف إطلاقاً!
         mergedDevices = [];
       }
 
@@ -384,12 +368,15 @@ const useDevicesStore = create((set, get) => ({
   },
 
   // ── إنهاء الحساب وقفل الفاتورة ──
-  endSession: (deviceId) => {
+  endSession: async (deviceId) => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
-    const device = get().devices.find((d) => d.id === deviceId);
-    if (!device?.session) return;
+    const device = get().devices.find(
+      (d) => d.id === deviceId || String(d.id) === String(deviceId)
+    );
+    if (!device?.session) return null;
 
+    const targetId = device.id;
     const endTime = Date.now();
     const durationSeconds = Math.floor((endTime - device.session.startTime) / 1000);
     const hourlyRate =
@@ -416,8 +403,11 @@ const useDevicesStore = create((set, get) => ({
       total: parseFloat((timeCost + ordersCost).toFixed(2)),
     };
 
+    // 1. تحديث الـ state والكاش المحلي فوراً ليكون الجهاز متاحاً
     const updatedDevices = get().devices.map((d) =>
-      d.id === deviceId ? { ...d, status: 'free', session: null } : d
+      d.id === targetId || String(d.id) === String(targetId)
+        ? { ...d, status: 'free', session: null }
+        : d
     );
 
     set((state) => ({
@@ -427,10 +417,13 @@ const useDevicesStore = create((set, get) => ({
     }));
     saveDevicesCache(updatedDevices);
 
-    supabaseService.updateDevice(deviceId, { status: 'free', session: null });
+    // 2. تحديث السيرفر في Supabase أولاً وقفل الجلسة تماماً
+    await supabaseService.updateDevice(targetId, { status: 'free', session: null });
 
+    // 3. حفظ الفاتورة في سجل الفواتير السحابي
     if (identifier) {
-      supabaseService.addCompletedSession(completed, identifier, client?.phone).then((saved) => {
+      try {
+        const saved = await supabaseService.addCompletedSession(completed, identifier, client?.phone);
         if (saved?.id) {
           set((state) => ({
             completedSessions: state.completedSessions.map((s) =>
@@ -438,8 +431,12 @@ const useDevicesStore = create((set, get) => ({
             ),
           }));
         }
-      });
+      } catch (err) {
+        console.error('Error saving completed session:', err);
+      }
     }
+
+    return completed;
   },
 
   // ── تعديل أسعار جهاز ──

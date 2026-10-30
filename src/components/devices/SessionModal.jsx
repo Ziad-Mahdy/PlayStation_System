@@ -5,12 +5,13 @@ import useLanguageStore from '../../store/languageStore';
 import { formatTime, computeCosts } from './DeviceCard';
 import InvoiceModal from './InvoiceModal';
 import toast from 'react-hot-toast';
+import { showConfirm } from '../../lib/swal';
 
 export default function SessionModal({ deviceId, onClose }) {
   const [elapsed, setElapsed] = useState(0);
   const [showAddOrder, setShowAddOrder] = useState(false);
-  const [confirmEnd, setConfirmEnd] = useState(false);
   const [closedInvoice, setClosedInvoice] = useState(null);
+  const [isEnding, setIsEnding] = useState(false);
 
   const language = useLanguageStore((s) => s.language);
   const isEn = language === 'en';
@@ -51,17 +52,33 @@ export default function SessionModal({ deviceId, onClose }) {
     );
   }
 
-  if (!device?.session) return null;
+  if (!device?.session && !isEnding) return null;
 
   const { timeCost, ordersCost, total } = computeCosts(device, elapsed);
 
-  const isFixed = device.session.timeType === 'fixed';
-  const targetSeconds = isFixed ? (device.session.targetMinutes || 0) * 60 : 0;
+  const isFixed = device?.session?.timeType === 'fixed';
+  const targetSeconds = isFixed ? (device?.session?.targetMinutes || 0) * 60 : 0;
   const remainingSeconds = isFixed ? Math.max(0, targetSeconds - elapsed) : 0;
   const isExpired = isFixed && elapsed >= targetSeconds;
   const progressPercent = isFixed && targetSeconds > 0 ? Math.min(100, (elapsed / targetSeconds) * 100) : 0;
 
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
+    if (!device?.session || isEnding) return;
+
+    const confirmed = await showConfirm({
+      title: isEn ? 'End Session & Checkout?' : 'إنهاء الجلسة والحساب؟',
+      text: isEn
+        ? `Station: ${device.name} • Total: ${total} ${currencyStr} (Time: ${timeCost} + Orders: ${ordersCost})`
+        : `جهاز: ${device.name} • إجمالي المبلغ: ${total} ${currencyStr} (الوقت: ${timeCost} + المشاريب: ${ordersCost})`,
+      confirmButtonText: isEn ? 'Yes, Checkout 🧾' : 'نعم، إنهاء الحساب 🧾',
+      cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+      icon: 'question',
+      isDanger: false,
+    });
+    if (!confirmed) return;
+
+    setIsEnding(true);
+
     const invoiceData = {
       id: Math.floor(1000 + Math.random() * 9000),
       deviceId: device.id,
@@ -80,13 +97,21 @@ export default function SessionModal({ deviceId, onClose }) {
       orders: [...(device.session.orders || [])],
     };
 
-    endSession(deviceId);
+    // نحدد الفاتورة مسبقاً لعرضها فوراً دون إغلاق المودال
     setClosedInvoice(invoiceData);
-    toast.success(
-      isEn
-        ? `Session finished & receipt created (${total} ${currencyStr}) 🧾`
-        : `تم إنهاء الجلسة وإصدار الفاتورة (${total} ج.م) 🧾`
-    );
+
+    try {
+      await endSession(deviceId);
+      toast.success(
+        isEn
+          ? `Session finished & receipt created (${total} ${currencyStr}) 🧾`
+          : `تم إنهاء الجلسة وإصدار الفاتورة (${total} ج.م) 🧾`
+      );
+    } catch (err) {
+      console.error('Error ending session:', err);
+    } finally {
+      setIsEnding(false);
+    }
   };
 
   const handleAddProduct = (product) => {
@@ -397,51 +422,31 @@ export default function SessionModal({ deviceId, onClose }) {
 
         {/* ── Footer Actions ── */}
         <div className="bg-surface-container-high p-3 px-4 sm:p-space-md sm:px-space-xl flex flex-col sm:flex-row items-center gap-2 sm:gap-space-sm shrink-0 border-t border-outline-variant/20">
-          {confirmEnd ? (
-            <>
-              <p className="font-label-md text-xs sm:text-label-md text-tertiary flex-1 text-center sm:text-start">
-                {isEn
-                  ? `Confirm checkout and record ${total} ${currencyStr}?`
-                  : `هل متأكد من إنهاء الجلسة وتسجيل ${total} ${currencyStr}؟`}
-              </p>
-              <button
-                onClick={handleEndSession}
-                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all transform active:scale-95 font-bold cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">check_circle</span>
-                <span>{isEn ? 'Confirm Checkout' : 'تأكيد الإنهاء'}</span>
-              </button>
-              <button
-                onClick={() => setConfirmEnd(false)}
-                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
-              >
-                {isEn ? 'Cancel' : 'إلغاء'}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setConfirmEnd(true)}
-                className="w-full sm:flex-1 h-12 sm:h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-sm transition-all transform active:scale-95 shadow-md font-bold cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">point_of_sale</span>
-                <span>{isEn ? 'End Session & Checkout' : 'إنهاء الجلسة والحساب'}</span>
-              </button>
-              <button
-                onClick={() => setShowAddOrder(true)}
-                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-md cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">local_bar</span>
-                <span>{isEn ? 'Add Order' : 'أضف طلب'}</span>
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
-              >
-                {isEn ? 'Close' : 'إغلاق'}
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleEndSession}
+            disabled={isEnding}
+            className="w-full sm:flex-1 h-12 sm:h-14 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-sm transition-all transform active:scale-95 shadow-md font-bold cursor-pointer disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[20px] sm:text-[22px]">point_of_sale</span>
+            <span>
+              {isEnding
+                ? (isEn ? 'Closing...' : 'جاري الإنهاء...')
+                : (isEn ? 'End Session & Checkout' : 'إنهاء الجلسة والحساب')}
+            </span>
+          </button>
+          <button
+            onClick={() => setShowAddOrder(true)}
+            className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-space-xs transition-all shadow-md cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">local_bar</span>
+            <span>{isEn ? 'Add Order' : 'أضف طلب'}</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-space-lg h-12 sm:h-14 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center transition-all cursor-pointer"
+          >
+            {isEn ? 'Close' : 'إغلاق'}
+          </button>
         </div>
       </div>
     </div>
