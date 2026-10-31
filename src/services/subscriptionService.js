@@ -273,10 +273,59 @@ export const subscriptionService = {
     }
   },
 
-  // ── [للمطور] حذف عميل ──
-  async deleteSubscriber(id) {
+  // ── [للمطور] حذف عميل وكافة بياناته المرتبطة بالكامل من السيرفر ──
+  async deleteSubscriber(id, phone = null, code = null) {
     if (!isSupabaseConfigured) return false;
     try {
+      let targetPhone = phone;
+      let targetCode = code;
+
+      // إذا لم يتوفر الهاتف أو الكود، نجلبهما أولاً من جدول subscriptions قبل الحذف
+      if (!targetPhone || !targetCode) {
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('phone, code')
+          .eq('id', id)
+          .maybeSingle();
+        if (subData) {
+          targetPhone = targetPhone || subData.phone;
+          targetCode = targetCode || subData.code;
+        }
+      }
+
+      const cleanPhone = (targetPhone || '').trim();
+      const cleanCode = (targetCode || '').trim();
+
+      // حذف الأجهزة، الفئات، المنتجات، والفواتير المسجلة باسم وهاتف أو كود العميل
+      const conditions = [];
+      if (cleanCode) conditions.push(`client_code.eq.${cleanCode}`);
+      if (cleanPhone) conditions.push(`client_phone.eq.${cleanPhone}`);
+      if (cleanPhone) conditions.push(`client_code.eq.${cleanPhone}`);
+      if (cleanCode) conditions.push(`client_phone.eq.${cleanCode}`);
+
+      if (conditions.length > 0) {
+        const orFilter = conditions.join(',');
+        await Promise.allSettled([
+          supabase.from('devices').delete().or(orFilter),
+          supabase.from('categories').delete().or(orFilter),
+          supabase.from('products').delete().or(orFilter),
+          supabase.from('completed_sessions').delete().or(orFilter),
+        ]);
+      }
+
+      // مسح الكاش المحلي المرتبط بالعميل إن وجد في هذا المتصفح
+      if (typeof window !== 'undefined' && window.localStorage) {
+        [cleanCode, cleanPhone].filter(Boolean).forEach((key) => {
+          try {
+            localStorage.removeItem(`ps_devices_cache_${key}`);
+            localStorage.removeItem(`ps_categories_cache_${key}`);
+            localStorage.removeItem(`ps_products_cache_${key}`);
+            localStorage.removeItem(`ps_cat_init_${key}`);
+          } catch (e) {}
+        });
+      }
+
+      // حذف سجل المشترك نفسه من جدول subscriptions
       const { error } = await supabase.from('subscriptions').delete().eq('id', id);
       if (error) throw error;
       return true;

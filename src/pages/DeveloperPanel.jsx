@@ -169,17 +169,17 @@ export default function DeveloperPanel() {
   // Handle Delete
   const handleDelete = async (sub) => {
     const ok = await showConfirm({
-      title: 'حذف المشترك نهائياً؟',
-      text: `هل أنت متأكد من حذف المشترك (${sub.client_name} - ${sub.shop_name})؟ سيتم إيقاف الكود وحذفه فوراً.`,
-      confirmButtonText: 'نعم، حذف المشترك',
+      title: 'حذف المشترك ومسح كافة بياناته؟',
+      text: `هل أنت متأكد من حذف المشترك (${sub.client_name} - ${sub.shop_name})؟ سيتم مسح الكود وحذف جميع بيانات الصالة (الأجهزة، الفئات، المنتجات، الفواتير) نهائياً ليبدأ من الصفر تماماً.`,
+      confirmButtonText: 'نعم، حذف المشترك وبياناته',
       cancelButtonText: 'إلغاء',
       icon: 'error',
       isDanger: true,
     });
     if (ok) {
-      const deleted = await deleteSubscriber(sub.id);
+      const deleted = await deleteSubscriber(sub.id, sub.phone, sub.code);
       if (deleted) {
-        toast.success('تم حذف المشترك بنجاح');
+        toast.success('تم حذف المشترك وكافة بياناته بنجاح 🗑️');
       } else {
         toast.error('فشل حذف المشترك');
       }

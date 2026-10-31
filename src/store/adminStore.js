@@ -60,19 +60,6 @@ const useAdminStore = create((set, get) => ({
       let finalProducts = [];
       if (dbProducts && dbProducts.length > 0) {
         finalProducts = dbProducts;
-      } else if (currentProducts && currentProducts.length > 0) {
-        // لو الكاش به منتجات والسيرفر لسه ملوش: نحافظ عليها ونرفعها للسيرفر
-        finalProducts = currentProducts;
-        for (const p of currentProducts) {
-          supabaseService.insertProduct(p, identifier, client?.phone).then((created) => {
-            if (created && created.id) {
-              set((state) => ({
-                products: state.products.map((item) => (item.name === p.name ? { ...item, id: created.id } : item)),
-              }));
-              saveProductsCache(get().products);
-            }
-          });
-        }
       } else {
         finalProducts = [];
       }

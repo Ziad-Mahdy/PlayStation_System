@@ -40,6 +40,18 @@ const useSubscriptionStore = create((set, get) => ({
     try {
       const result = await subscriptionService.loginAndVerifyClient(phone, code);
       if (result.success && result.client) {
+        if (result.isNewActivation) {
+          try {
+            const cleanCode = result.client.code;
+            const cleanPhone = result.client.phone;
+            [cleanCode, cleanPhone].filter(Boolean).forEach((k) => {
+              localStorage.removeItem(`ps_devices_cache_${k}`);
+              localStorage.removeItem(`ps_categories_cache_${k}`);
+              localStorage.removeItem(`ps_products_cache_${k}`);
+              localStorage.removeItem(`ps_cat_init_${k}`);
+            });
+          } catch (e) {}
+        }
         localStorage.setItem('playstation_client_session', JSON.stringify(result.client));
         set({
           currentClient: result.client,
@@ -208,10 +220,18 @@ const useSubscriptionStore = create((set, get) => ({
     }
   },
 
-  deleteSubscriber: async (id) => {
-    const success = await subscriptionService.deleteSubscriber(id);
+  deleteSubscriber: async (id, phone = null, code = null) => {
+    const sub = get().subscribers.find((s) => s.id === id);
+    const targetPhone = phone || sub?.phone;
+    const targetCode = code || sub?.code;
+
+    const success = await subscriptionService.deleteSubscriber(id, targetPhone, targetCode);
     if (success) {
-      if (get().currentClient?.id === id) {
+      if (
+        get().currentClient?.id === id ||
+        (targetPhone && get().currentClient?.phone === targetPhone) ||
+        (targetCode && get().currentClient?.code === targetCode)
+      ) {
         get().logoutClient();
       }
       set((state) => ({
