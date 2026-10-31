@@ -81,8 +81,9 @@ const useDevicesStore = create((set, get) => ({
   nextOrderId: 1000,
   isLoading: false,
   isSynced: false,
+  isSavingDevice: false,
 
-  // ── جلب داتا الكلاينت فقط من Supabase مع دمج الكاش وحماية الجلسات النشطة ──
+  // ── جلب داتا الكلاينت فقط من Supabase مع دمج الكاش وحماية الجلسات النشطة وتوحيد الأجهزة ──
   initSync: async () => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
@@ -119,14 +120,15 @@ const useDevicesStore = create((set, get) => ({
       }
       saveCategoriesCache(finalCategories);
 
-      const cached = getCachedDevices();
-      const currentDevices = (get().devices && get().devices.length > 0) ? get().devices : cached;
-
-      let mergedDevices = [];
-      if (dbDevices && dbDevices.length > 0) {
-        mergedDevices = dbDevices;
-      } else {
-        mergedDevices = [];
+      // توحيد الأجهزة بالاسم لضمان عدم وجود تكرار نهائياً
+      const seenDevNames = new Set();
+      const mergedDevices = [];
+      for (const d of (dbDevices || [])) {
+        const normName = (d.name || '').trim().toLowerCase();
+        if (normName && !seenDevNames.has(normName)) {
+          seenDevNames.add(normName);
+          mergedDevices.push(d);
+        }
       }
 
       saveDevicesCache(mergedDevices);
@@ -174,72 +176,95 @@ const useDevicesStore = create((set, get) => ({
     }
   },
 
-  // ── إضافة جهاز جديد للكلاينت ──
+  // ── إضافة جهاز جديد للكلاينت مع قفل متزامن لمنع الإضافة المزدوجة ──
   addDevice: async (deviceData) => {
-    const client = getClientSession();
-    const identifier = client?.code || client?.phone;
-    const nameTrimmed = (deviceData.name || '').trim();
-    const exists = get().devices.some(
-      (d) => d.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
-    );
-    if (exists) return false;
+    if (get().isSavingDevice) return false;
+    set({ isSavingDevice: true });
 
-    const payload = {
-      name: nameTrimmed || `جهاز جديد`,
-      type: deviceData.type || 'PlayStation 5',
-      isVIP: Boolean(deviceData.isVIP),
-      singlePrice: parseFloat(deviceData.singlePrice) || 45,
-      multiPrice: parseFloat(deviceData.multiPrice) || 35,
-      status: 'free',
-      session: null,
-    };
+    try {
+      const client = getClientSession();
+      const identifier = client?.code || client?.phone;
+      const nameTrimmed = (deviceData.name || '').trim();
+      const normName = nameTrimmed.toLowerCase();
 
-    if (identifier) {
-      const created = await supabaseService.insertDevice(payload, identifier, client?.phone);
-      if (created && created.id) {
-        const newDevice = {
-          id: created.id,
-          name: created.name,
-          type: created.type,
-          isVIP: Boolean(created.is_vip ?? deviceData.isVIP),
-          singlePrice: parseFloat(created.single_price ?? deviceData.singlePrice) || 45,
-          multiPrice: parseFloat(created.multi_price ?? deviceData.multiPrice) || 35,
-          status: created.status || 'free',
-          session: created.session || null,
-        };
-        const updatedDevices = [
-          ...get().devices.filter((d) => d.id !== created.id && d.name !== newDevice.name),
-          newDevice,
-        ];
-        set({ devices: updatedDevices });
-        saveDevicesCache(updatedDevices);
-        return true;
+      const exists = get().devices.some(
+        (d) => d.name.trim().toLowerCase() === normName
+      );
+      if (exists) return false;
+
+      const payload = {
+        name: nameTrimmed || `جهاز جديد`,
+        type: deviceData.type || 'PlayStation 5',
+        isVIP: Boolean(deviceData.isVIP),
+        singlePrice: parseFloat(deviceData.singlePrice) || 45,
+        multiPrice: parseFloat(deviceData.multiPrice) || 35,
+        status: 'free',
+        session: null,
+      };
+
+      if (identifier) {
+        const created = await supabaseService.insertDevice(payload, identifier, client?.phone);
+        if (created && created.id) {
+          const newDevice = {
+            id: created.id,
+            name: created.name,
+            type: created.type,
+            isVIP: Boolean(created.is_vip ?? deviceData.isVIP),
+            singlePrice: parseFloat(created.single_price ?? deviceData.singlePrice) || 45,
+            multiPrice: parseFloat(created.multi_price ?? deviceData.multiPrice) || 35,
+            status: created.status || 'free',
+            session: created.session || null,
+          };
+          const updatedDevices = [
+            ...get().devices.filter(
+              (d) =>
+                d.id !== created.id &&
+                d.name.trim().toLowerCase() !== normName
+            ),
+            newDevice,
+          ];
+          set({ devices: updatedDevices });
+          saveDevicesCache(updatedDevices);
+          return true;
+        }
       }
-    }
 
-    const tempId = Date.now();
-    const fallbackDevice = { id: tempId, ...payload };
-    const updatedDevices = [...get().devices, fallbackDevice];
-    set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
-    return true;
+      const tempId = Date.now();
+      const fallbackDevice = { id: tempId, ...payload };
+      const updatedDevices = [
+        ...get().devices.filter(
+          (d) => d.name.trim().toLowerCase() !== normName
+        ),
+        fallbackDevice,
+      ];
+      set({ devices: updatedDevices });
+      saveDevicesCache(updatedDevices);
+      return true;
+    } finally {
+      set({ isSavingDevice: false });
+    }
   },
 
-  // ── حذف جهاز ──
+  // ── حذف جهاز نهائياً من الـ state وقاعدة البيانات والكاش ──
   deleteDevice: async (deviceId, deviceName = null) => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
 
     // 1. تحديد الجهاز المستهدف
     const target = get().devices.find(
-      (d) => d.id === deviceId || (deviceName && d.name === deviceName)
+      (d) =>
+        d.id === deviceId ||
+        (deviceName && d.name.trim().toLowerCase() === deviceName.trim().toLowerCase())
     );
     const targetId = target?.id || deviceId;
     const targetName = target?.name || deviceName;
+    const normTargetName = (targetName || '').trim().toLowerCase();
 
     // 2. حذفه من الـ state والكاش المحلي فوراً لمنع ظهوره
     const updatedDevices = get().devices.filter(
-      (d) => d.id !== targetId && d.name !== targetName
+      (d) =>
+        d.id !== targetId &&
+        (!normTargetName || d.name.trim().toLowerCase() !== normTargetName)
     );
     set({ devices: updatedDevices });
     saveDevicesCache(updatedDevices);

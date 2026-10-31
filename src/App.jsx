@@ -49,13 +49,22 @@ export default function App() {
 
   // Realtime listeners & periodic subscription check
   useEffect(() => {
-    // Realtime changes for devices & products
+    let devicesDebounceTimer = null;
+    let productsDebounceTimer = null;
+
+    // Realtime changes for devices & products (مع Debounce لمنع السباق والتحديثات المتكررة)
     const unsubscribeSync = supabaseService.subscribeToChanges((table) => {
       if (['devices', 'categories', 'completed_sessions'].includes(table)) {
-        useDevicesStore.getState().initSync();
+        if (devicesDebounceTimer) clearTimeout(devicesDebounceTimer);
+        devicesDebounceTimer = setTimeout(() => {
+          useDevicesStore.getState().initSync();
+        }, 300);
       }
       if (table === 'products') {
-        useAdminStore.getState().initSync();
+        if (productsDebounceTimer) clearTimeout(productsDebounceTimer);
+        productsDebounceTimer = setTimeout(() => {
+          useAdminStore.getState().initSync();
+        }, 300);
       }
     });
 
@@ -73,6 +82,8 @@ export default function App() {
     }, 60000);
 
     return () => {
+      if (devicesDebounceTimer) clearTimeout(devicesDebounceTimer);
+      if (productsDebounceTimer) clearTimeout(productsDebounceTimer);
       unsubscribeSync();
       unsubscribeSub();
       clearInterval(timer);

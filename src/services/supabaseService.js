@@ -31,17 +31,28 @@ export const supabaseService = {
         return [];
       }
 
-      return (data || []).map((d) => ({
-        id: d.id,
-        name: d.name,
-        type: d.type,
-        isVIP: Boolean(d.is_vip),
-        singlePrice: parseFloat(d.single_price) || 0,
-        multiPrice: parseFloat(d.multi_price) || 0,
-        status: d.status || 'free',
-        session: d.session || null,
-        clientCode: d.client_code || identifier,
-      }));
+      // فلترة وتوحيد الأجهزة لمنع تكرار أي جهاز بالاسم أو الـ ID
+      const seenNames = new Set();
+      const uniqueDevices = [];
+      for (const d of (data || [])) {
+        const normName = (d.name || '').trim().toLowerCase();
+        if (normName && !seenNames.has(normName)) {
+          seenNames.add(normName);
+          uniqueDevices.push({
+            id: d.id,
+            name: d.name,
+            type: d.type,
+            isVIP: Boolean(d.is_vip),
+            singlePrice: parseFloat(d.single_price) || 0,
+            multiPrice: parseFloat(d.multi_price) || 0,
+            status: d.status || 'free',
+            session: d.session || null,
+            clientCode: d.client_code || identifier,
+          });
+        }
+      }
+
+      return uniqueDevices;
     } catch (err) {
       console.error('fetchDevices exception:', err);
       return [];
@@ -51,10 +62,29 @@ export const supabaseService = {
   async insertDevice(device, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return null;
     try {
+      const clientPhone = phone || identifier;
+      const trimmedName = device.name.trim();
+
+      // فحص مسبق: إذا كان الجهاز مسجلاً بالفعل في قاعدة البيانات نرجعه دون إدخال مكرر
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
+      const { data: existing } = await supabase
+        .from('devices')
+        .select('*')
+        .eq('name', trimmedName)
+        .or(orFilter)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        return existing[0];
+      }
+
       const payload = {
         client_code: identifier,
-        client_phone: phone || identifier,
-        name: device.name.trim(),
+        client_phone: clientPhone,
+        name: trimmedName,
         type: device.type,
         is_vip: device.isVIP,
         single_price: device.singlePrice,
@@ -127,7 +157,7 @@ export const supabaseService = {
           .from('devices')
           .delete()
           .eq('name', name)
-          .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone}`);
+          .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
       }
     } catch (err) {
       console.error('deleteDevice exception:', err);
@@ -227,13 +257,25 @@ export const supabaseService = {
       }
 
       if (error || !data) return [];
-      return data.map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: parseFloat(p.price) || 0,
-        category: p.category || 'مشروبات',
-        clientCode: p.client_code || identifier,
-      }));
+
+      // فلترة وتوحيد المنتجات لمنع تكرار أي منتج بالاسم
+      const seenNames = new Set();
+      const uniqueProducts = [];
+      for (const p of data) {
+        const normName = (p.name || '').trim().toLowerCase();
+        if (normName && !seenNames.has(normName)) {
+          seenNames.add(normName);
+          uniqueProducts.push({
+            id: p.id,
+            name: p.name,
+            price: parseFloat(p.price) || 0,
+            category: p.category || 'مشروبات',
+            clientCode: p.client_code || identifier,
+          });
+        }
+      }
+
+      return uniqueProducts;
     } catch (err) {
       return [];
     }
@@ -242,10 +284,29 @@ export const supabaseService = {
   async insertProduct(product, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return null;
     try {
+      const clientPhone = phone || identifier;
+      const trimmedName = product.name.trim();
+
+      // فحص مسبق: إذا كان المنتج مسجلاً بالفعل في قاعدة البيانات نرجعه دون إدخال مكرر
+      const orFilter = identifier === clientPhone
+        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+
+      const { data: existing } = await supabase
+        .from('products')
+        .select('*')
+        .eq('name', trimmedName)
+        .or(orFilter)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        return existing[0];
+      }
+
       const payload = {
         client_code: identifier,
-        client_phone: phone || identifier,
-        name: product.name.trim(),
+        client_phone: clientPhone,
+        name: trimmedName,
         price: product.price,
         category: product.category || 'مشروبات',
       };

@@ -58,6 +58,8 @@ export default function AdminPage() {
   const [editingProductId, setEditingProductId] = useState(null);
   const [productForm, setProductForm] = useState({ name: '', price: '', category: 'مشروبات' });
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
+  const [isSubmittingDevice, setIsSubmittingDevice] = useState(false);
 
   // Rate Editing State
   const [editingRates, setEditingRates] = useState({}); // { [deviceId]: { single, multi } }
@@ -107,6 +109,8 @@ export default function AdminPage() {
   // Handle product save
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    if (isSubmittingProduct) return;
+
     const trimmedName = productForm.name.trim();
     if (!trimmedName || !productForm.price) {
       toast.error('يرجى ملء جميع الحقول بشكل صحيح');
@@ -131,33 +135,38 @@ export default function AdminPage() {
       return;
     }
 
-    if (editingProductId) {
-      const ok = await updateProduct(editingProductId, {
-        name: trimmedName,
-        price: priceNum,
-        category: productForm.category,
-      });
-      if (ok === false) {
-        toast.error(`المشروب / المنتج "${trimmedName}" موجود بالفعل!`);
-        return;
+    setIsSubmittingProduct(true);
+    try {
+      if (editingProductId) {
+        const ok = await updateProduct(editingProductId, {
+          name: trimmedName,
+          price: priceNum,
+          category: productForm.category,
+        });
+        if (ok === false) {
+          toast.error(`المشروب / المنتج "${trimmedName}" موجود بالفعل!`);
+          return;
+        }
+        toast.success(isEn ? 'Product updated successfully' : 'تم تحديث المنتج بنجاح');
+      } else {
+        const ok = await addProduct({
+          name: trimmedName,
+          price: priceNum,
+          category: productForm.category,
+        });
+        if (ok === false) {
+          toast.error(`المشروب / المنتج "${trimmedName}" موجود بالفعل!`);
+          return;
+        }
+        toast.success(isEn ? 'Product added successfully' : 'تمت إضافة المنتج بنجاح');
       }
-      toast.success(isEn ? 'Product updated successfully' : 'تم تحديث المنتج بنجاح');
-    } else {
-      const ok = await addProduct({
-        name: trimmedName,
-        price: priceNum,
-        category: productForm.category,
-      });
-      if (ok === false) {
-        toast.error(`المشروب / المنتج "${trimmedName}" موجود بالفعل!`);
-        return;
-      }
-      toast.success(isEn ? 'Product added successfully' : 'تمت إضافة المنتج بنجاح');
-    }
 
-    setIsProductModalOpen(false);
-    setEditingProductId(null);
-    setProductForm({ name: '', price: '', category: 'مشروبات' });
+      setIsProductModalOpen(false);
+      setEditingProductId(null);
+      setProductForm({ name: '', price: '', category: 'مشروبات' });
+    } finally {
+      setIsSubmittingProduct(false);
+    }
   };
 
   const handleEditProductClick = (prod) => {
@@ -186,6 +195,8 @@ export default function AdminPage() {
   // ── Handle Add Device ──
   const handleAddDeviceSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmittingDevice) return;
+
     const trimmedName = newDeviceForm.name.trim();
     if (!trimmedName) {
       toast.error('يرجى كتابة اسم أو رقم الجهاز');
@@ -208,28 +219,33 @@ export default function AdminPage() {
       return;
     }
 
-    const ok = await addDevice({
-      name: trimmedName,
-      type: newDeviceForm.type,
-      isVIP: newDeviceForm.isVIP,
-      singlePrice: single,
-      multiPrice: multi,
-    });
+    setIsSubmittingDevice(true);
+    try {
+      const ok = await addDevice({
+        name: trimmedName,
+        type: newDeviceForm.type,
+        isVIP: newDeviceForm.isVIP,
+        singlePrice: single,
+        multiPrice: multi,
+      });
 
-    if (ok === false) {
-      toast.error(`الجهاز "${trimmedName}" موجود بالفعل في الصالة!`);
-      return;
+      if (ok === false) {
+        toast.error(`الجهاز "${trimmedName}" موجود بالفعل في الصالة!`);
+        return;
+      }
+
+      toast.success(`تمت إضافة ${trimmedName} بنجاح! 🎮`);
+      setIsAddDeviceModalOpen(false);
+      setNewDeviceForm({
+        name: '',
+        type: categories[0] || 'PS4',
+        isVIP: false,
+        singlePrice: '45',
+        multiPrice: '35',
+      });
+    } finally {
+      setIsSubmittingDevice(false);
     }
-
-    toast.success(`تمت إضافة ${trimmedName} بنجاح! 🎮`);
-    setIsAddDeviceModalOpen(false);
-    setNewDeviceForm({
-      name: '',
-      type: categories[0] || 'PS4',
-      isVIP: false,
-      singlePrice: '45',
-      multiPrice: '35',
-    });
   };
 
   // ── Handle Delete Device ──
@@ -265,12 +281,13 @@ export default function AdminPage() {
   };
 
   // ── Handle Categories (Add / Delete) ──
-  const handleAddCategorySubmit = (e) => {
+  const handleAddCategorySubmit = async (e) => {
     e.preventDefault();
-    if (!newCategoryInput.trim()) return;
-    const ok = addCategory(newCategoryInput.trim());
+    const catName = newCategoryInput.trim();
+    if (!catName) return;
+    const ok = await addCategory(catName);
     if (ok) {
-      toast.success(`تمت إضافة قسم "${newCategoryInput.trim()}" بنجاح! 🎉`);
+      toast.success(`تمت إضافة قسم "${catName}" بنجاح! 🎉`);
       setNewCategoryInput('');
       setShowAddCatInput(false);
     } else {
@@ -1084,15 +1101,24 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setIsProductModalOpen(false)}
-                    className="flex-1 h-10 sm:h-11 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline-sm text-xs sm:text-sm rounded-xl"
+                    disabled={isSubmittingProduct}
+                    className="flex-1 h-10 sm:h-11 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline-sm text-xs sm:text-sm rounded-xl disabled:opacity-50"
                   >
                     {isEn ? 'Cancel' : 'إلغاء'}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 h-10 sm:h-11 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-xs sm:text-sm rounded-xl font-bold"
+                    disabled={isSubmittingProduct}
+                    className="flex-1 h-10 sm:h-11 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-xs sm:text-sm rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {editingProductId ? (isEn ? 'Save' : 'حفظ التعديل') : (isEn ? 'Add' : 'إضافة المنتج')}
+                    {isSubmittingProduct ? (
+                      <>
+                        <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        <span>{editingProductId ? (isEn ? 'Saving...' : 'جاري الحفظ...') : (isEn ? 'Adding...' : 'جاري الإضافة...')}</span>
+                      </>
+                    ) : (
+                      editingProductId ? (isEn ? 'Save' : 'حفظ التعديل') : (isEn ? 'Add' : 'إضافة المنتج')
+                    )}
                   </button>
                 </div>
               </form>
@@ -1233,16 +1259,27 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setIsAddDeviceModalOpen(false)}
-                    className="flex-1 h-10 sm:h-11 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline-sm text-xs sm:text-sm rounded-xl"
+                    disabled={isSubmittingDevice}
+                    className="flex-1 h-10 sm:h-11 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline-sm text-xs sm:text-sm rounded-xl disabled:opacity-50"
                   >
                     {isEn ? 'Cancel' : 'إلغاء'}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 h-10 sm:h-11 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-xs sm:text-sm rounded-xl font-bold flex items-center justify-center gap-1 shadow-md"
+                    disabled={isSubmittingDevice}
+                    className="flex-1 h-10 sm:h-11 bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary font-headline-sm text-xs sm:text-sm rounded-xl font-bold flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="material-symbols-outlined text-[18px] sm:text-[20px]">add</span>
-                    <span>{isEn ? 'Add Device' : 'إضافة الجهاز'}</span>
+                    {isSubmittingDevice ? (
+                      <>
+                        <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        <span>{isEn ? 'Adding Device...' : 'جاري إضافة الجهاز...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[18px] sm:text-[20px]">add</span>
+                        <span>{isEn ? 'Add Device' : 'إضافة الجهاز'}</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
