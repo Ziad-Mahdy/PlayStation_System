@@ -105,7 +105,7 @@ export default function AdminPage() {
   const paginatedSessions = filteredSessions.slice(startSessionIdx, startSessionIdx + SESSIONS_PER_PAGE);
 
   // Handle product save
-  const handleSaveProduct = (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     const trimmedName = productForm.name.trim();
     if (!trimmedName || !productForm.price) {
@@ -132,7 +132,7 @@ export default function AdminPage() {
     }
 
     if (editingProductId) {
-      const ok = updateProduct(editingProductId, {
+      const ok = await updateProduct(editingProductId, {
         name: trimmedName,
         price: priceNum,
         category: productForm.category,
@@ -141,9 +141,9 @@ export default function AdminPage() {
         toast.error(`المشروب / المنتج "${trimmedName}" موجود بالفعل!`);
         return;
       }
-      toast.success('تم تحديث المنتج بنجاح');
+      toast.success(isEn ? 'Product updated successfully' : 'تم تحديث المنتج بنجاح');
     } else {
-      const ok = addProduct({
+      const ok = await addProduct({
         name: trimmedName,
         price: priceNum,
         category: productForm.category,
@@ -152,7 +152,7 @@ export default function AdminPage() {
         toast.error(`المشروب / المنتج "${trimmedName}" موجود بالفعل!`);
         return;
       }
-      toast.success('تمت إضافة المنتج بنجاح');
+      toast.success(isEn ? 'Product added successfully' : 'تمت إضافة المنتج بنجاح');
     }
 
     setIsProductModalOpen(false);
@@ -178,7 +178,7 @@ export default function AdminPage() {
       isDanger: true,
     });
     if (ok) {
-      deleteProduct(id);
+      await deleteProduct(id, name);
       toast.success(isEn ? 'Product deleted successfully' : 'تم حذف المنتج');
     }
   };

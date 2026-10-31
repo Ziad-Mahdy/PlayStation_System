@@ -88,27 +88,42 @@ const useAdminStore = create((set, get) => ({
     );
     if (exists) return false;
 
-    const tempId = Date.now();
-    const newProd = { ...product, id: tempId, name: nameTrimmed };
+    const payload = {
+      name: nameTrimmed,
+      price: parseFloat(product.price) || 0,
+      category: product.category || 'مشروبات',
+    };
 
-    const updated = [...get().products, newProd];
+    if (identifier) {
+      const created = await supabaseService.insertProduct(payload, identifier, client?.phone);
+      if (created && created.id) {
+        const newProd = {
+          id: created.id,
+          name: created.name,
+          price: parseFloat(created.price) || payload.price,
+          category: created.category || payload.category,
+        };
+        const updated = [
+          ...get().products.filter((p) => p.id !== created.id && p.name !== newProd.name),
+          newProd,
+        ];
+        set({
+          products: updated,
+          nextProductId: Math.max(get().nextProductId, created.id + 1),
+        });
+        saveProductsCache(updated);
+        return true;
+      }
+    }
+
+    const tempId = Date.now();
+    const fallbackProd = { ...payload, id: tempId };
+    const updated = [...get().products, fallbackProd];
     set({
       products: updated,
       nextProductId: get().nextProductId + 1,
     });
     saveProductsCache(updated);
-
-    if (identifier) {
-      const created = await supabaseService.insertProduct(newProd, identifier, client?.phone);
-      if (created && created.id) {
-        const withRealId = get().products.map((p) =>
-          p.id === tempId ? { ...p, id: created.id } : p
-        );
-        set({ products: withRealId });
-        saveProductsCache(withRealId);
-      }
-    }
-
     return true;
   },
 
@@ -134,12 +149,28 @@ const useAdminStore = create((set, get) => ({
   },
 
   // ── حذف منتج ──
-  deleteProduct: async (id) => {
-    const updated = get().products.filter((p) => p.id !== id);
+  deleteProduct: async (id, name = null) => {
+    const client = getClientSession();
+    const identifier = client?.code || client?.phone;
+
+    // 1. تحديد المنتج المستهدف بدقة بالـ id أو الاسم
+    const target = get().products.find(
+      (p) => p.id === id || (name && p.name === name)
+    );
+    const targetId = target?.id || id;
+    const targetName = target?.name || name;
+
+    // 2. حذفه من الـ state والكاش المحلي فوراً لمنع عودته
+    const updated = get().products.filter(
+      (p) => p.id !== targetId && p.name !== targetName
+    );
     set({ products: updated });
     saveProductsCache(updated);
 
-    await supabaseService.deleteProduct(id);
+    // 3. حذفه نهائياً من قاعدة بيانات Supabase
+    if (identifier) {
+      await supabaseService.deleteProduct(targetId, targetName, identifier, client?.phone);
+    }
   },
 }));
 
