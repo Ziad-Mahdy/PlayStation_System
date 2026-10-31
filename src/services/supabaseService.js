@@ -148,15 +148,16 @@ export const supabaseService = {
   async deleteDevice(id, name = null, identifier = null, phone = null) {
     if (!isSupabaseConfigured) return;
     try {
-      if (id && typeof id === 'number' && id < 1000000000000) {
+      const clientPhone = phone || identifier;
+      if (id) {
         await supabase.from('devices').delete().eq('id', id);
       }
       if (name && identifier) {
-        const clientPhone = phone || identifier;
+        const trimmed = name.trim();
         await supabase
           .from('devices')
           .delete()
-          .eq('name', name)
+          .ilike('name', trimmed)
           .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
       }
     } catch (err) {
@@ -351,15 +352,16 @@ export const supabaseService = {
   async deleteProduct(id, name = null, identifier = null, phone = null) {
     if (!isSupabaseConfigured) return;
     try {
-      if (id && typeof id === 'number' && id < 1000000000000) {
+      const clientPhone = phone || identifier;
+      if (id) {
         await supabase.from('products').delete().eq('id', id);
       }
       if (name && identifier) {
-        const clientPhone = phone || identifier;
+        const trimmed = name.trim();
         await supabase
           .from('products')
           .delete()
-          .eq('name', name)
+          .ilike('name', trimmed)
           .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
       }
     } catch (err) {

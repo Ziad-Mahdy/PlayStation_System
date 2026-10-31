@@ -264,6 +264,7 @@ const useDevicesStore = create((set, get) => ({
     const updatedDevices = get().devices.filter(
       (d) =>
         d.id !== targetId &&
+        String(d.id) !== String(targetId) &&
         (!normTargetName || d.name.trim().toLowerCase() !== normTargetName)
     );
     set({ devices: updatedDevices });

@@ -177,7 +177,10 @@ const useAdminStore = create((set, get) => ({
 
     // 1. تحديد المنتج المستهدف بدقة بالـ id أو الاسم
     const target = get().products.find(
-      (p) => p.id === id || (name && p.name.trim().toLowerCase() === name.trim().toLowerCase())
+      (p) =>
+        p.id === id ||
+        String(p.id) === String(id) ||
+        (name && p.name.trim().toLowerCase() === name.trim().toLowerCase())
     );
     const targetId = target?.id || id;
     const targetName = target?.name || name;
@@ -187,6 +190,7 @@ const useAdminStore = create((set, get) => ({
     const updated = get().products.filter(
       (p) =>
         p.id !== targetId &&
+        String(p.id) !== String(targetId) &&
         (!normTargetName || p.name.trim().toLowerCase() !== normTargetName)
     );
     set({ products: updated });
