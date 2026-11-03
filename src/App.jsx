@@ -39,13 +39,13 @@ export default function App() {
   const isClientLoggedIn = useSubscriptionStore((s) => s.isClientLoggedIn);
   const checkAndUpdateCurrentClient = useSubscriptionStore((s) => s.checkAndUpdateCurrentClient);
 
-  // Sync data when client logs in or changes
+  // Sync data when client logs in or changes (سواء تغير الهاتف أو الكود)
   useEffect(() => {
     if (isClientLoggedIn) {
       useDevicesStore.getState().initSync();
       useAdminStore.getState().initSync();
     }
-  }, [isClientLoggedIn, currentClient?.phone]);
+  }, [isClientLoggedIn, currentClient?.phone, currentClient?.code]);
 
   // Realtime listeners & periodic subscription check
   useEffect(() => {

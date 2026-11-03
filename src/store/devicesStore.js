@@ -479,13 +479,25 @@ const useDevicesStore = create((set, get) => ({
     supabaseService.updateDevice(deviceId, { [key]: numVal });
   },
 
-  // ── تفريغ فواتير اليوم ──
-  clearCompletedSessions: () => {
+  // ── حذف فاتورة فردية نهائياً من الحالة وقاعدة البيانات ──
+  deleteCompletedSession: async (sessionId) => {
+    // 1. مسحها محلياً فوراً
+    const updated = get().completedSessions.filter(
+      (s) => s.id !== sessionId && String(s.id) !== String(sessionId)
+    );
+    set({ completedSessions: updated });
+
+    // 2. مسحها نهائياً من Supabase
+    await supabaseService.deleteCompletedSession(sessionId);
+  },
+
+  // ── تفريغ فواتير اليوم نهائياً ──
+  clearCompletedSessions: async () => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
     set({ completedSessions: [], nextSessionId: 1 });
     if (identifier) {
-      supabaseService.clearCompletedSessions(identifier);
+      await supabaseService.clearCompletedSessions(identifier, client?.phone);
     }
   },
 }));

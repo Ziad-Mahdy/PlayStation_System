@@ -40,11 +40,23 @@ const useSubscriptionStore = create((set, get) => ({
     try {
       const result = await subscriptionService.loginAndVerifyClient(phone, code);
       if (result.success && result.client) {
-        if (result.isNewActivation) {
+        // إذا كان هذا كود جديد أو مختلف عن الجلسة السابقة: ننظف الذاكرة القديمة تماماً لضمان البدء من الصفر
+        const prevSessionRaw = localStorage.getItem('playstation_client_session');
+        let prevClient = null;
+        try {
+          prevClient = prevSessionRaw ? JSON.parse(prevSessionRaw) : null;
+        } catch (e) {}
+
+        if (result.isNewActivation || (prevClient && prevClient.code !== result.client.code)) {
           try {
-            const cleanCode = result.client.code;
-            const cleanPhone = result.client.phone;
-            [cleanCode, cleanPhone].filter(Boolean).forEach((k) => {
+            const keysToClean = [
+              result.client.code,
+              result.client.phone,
+              prevClient?.code,
+              prevClient?.phone,
+            ].filter(Boolean);
+
+            keysToClean.forEach((k) => {
               localStorage.removeItem(`ps_devices_cache_${k}`);
               localStorage.removeItem(`ps_categories_cache_${k}`);
               localStorage.removeItem(`ps_products_cache_${k}`);

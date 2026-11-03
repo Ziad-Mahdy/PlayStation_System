@@ -305,7 +305,7 @@ export const subscriptionService = {
 
       if (conditions.length > 0) {
         const orFilter = conditions.join(',');
-        await Promise.allSettled([
+        await Promise.all([
           supabase.from('devices').delete().or(orFilter),
           supabase.from('categories').delete().or(orFilter),
           supabase.from('products').delete().or(orFilter),

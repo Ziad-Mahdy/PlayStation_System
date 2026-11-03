@@ -1,6 +1,6 @@
 import useLanguageStore from '../../store/languageStore';
 
-export default function InvoiceModal({ invoice, onClose }) {
+export default function InvoiceModal({ invoice, onClose, onDelete }) {
   const language = useLanguageStore((s) => s.language);
   const isEn = language === 'en';
   const currencyStr = isEn ? '$' : 'ج.م';
@@ -185,6 +185,17 @@ export default function InvoiceModal({ invoice, onClose }) {
 
         {/* Footer Actions for Worker */}
         <div className="bg-surface-container-high p-space-md px-space-lg flex gap-space-sm border-t border-outline-variant/20">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="h-12 px-3 sm:px-4 bg-error-container/20 hover:bg-error-container text-error hover:text-on-error-container font-headline-sm text-sm sm:text-headline-sm rounded-xl flex items-center justify-center gap-1.5 transition-all border border-error/30 cursor-pointer shrink-0"
+              title={isEn ? 'Delete Invoice' : 'حذف الفاتورة'}
+            >
+              <span className="material-symbols-outlined text-[20px]">delete</span>
+              <span>{isEn ? 'Delete' : 'حذف'}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handlePrint}

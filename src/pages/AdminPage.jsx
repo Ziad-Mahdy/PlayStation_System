@@ -26,6 +26,7 @@ export default function AdminPage() {
   const addDevice = useDevicesStore((s) => s.addDevice);
   const deleteDevice = useDevicesStore((s) => s.deleteDevice);
   const clearCompletedSessions = useDevicesStore((s) => s.clearCompletedSessions);
+  const deleteCompletedSession = useDevicesStore((s) => s.deleteCompletedSession);
 
   const products = useAdminStore((s) => s.products);
   const addProduct = useAdminStore((s) => s.addProduct);
@@ -355,8 +356,29 @@ export default function AdminPage() {
       isDanger: true,
     });
     if (ok) {
-      clearCompletedSessions();
+      await clearCompletedSessions();
       toast.success(isEn ? 'Today\'s shift invoices cleared' : 'تم تصفير حسابات اليوم');
+    }
+  };
+
+  const handleDeleteSessionClick = async (session) => {
+    if (!session || !session.id) return;
+    const ok = await showConfirm({
+      title: isEn ? 'Delete Invoice?' : 'حذف الفاتورة؟',
+      text: isEn
+        ? `Are you sure you want to permanently delete invoice #${session.id} for "${session.deviceName}"?`
+        : `هل أنت متأكد من حذف الفاتورة #${session.id} الخاصة بـ "${session.deviceName}" نهائياً من السجلات؟`,
+      confirmButtonText: isEn ? 'Yes, Delete' : 'نعم، حذف الفاتورة',
+      cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
+      icon: 'warning',
+      isDanger: true,
+    });
+    if (ok) {
+      await deleteCompletedSession(session.id);
+      if (adminPreviewInvoice?.id === session.id) {
+        setAdminPreviewInvoice(null);
+      }
+      toast.success(isEn ? 'Invoice deleted successfully' : 'تم حذف الفاتورة بنجاح');
     }
   };
 
@@ -658,14 +680,24 @@ export default function AdminPage() {
                               {session.total?.toFixed(2)} {t('card_egp')}
                             </td>
                             <td className="p-2.5 sm:p-space-md text-center">
-                              <button
-                                type="button"
-                                onClick={() => setAdminPreviewInvoice(session)}
-                                className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-xs rounded-lg transition-colors inline-flex items-center gap-1 border border-outline-variant/30"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-                                <span>{t('worker_view')}</span>
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setAdminPreviewInvoice(session)}
+                                  className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-xs rounded-lg transition-colors inline-flex items-center gap-1 border border-outline-variant/30"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                                  <span>{t('worker_view')}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSessionClick(session)}
+                                  title={isEn ? 'Delete Invoice' : 'حذف الفاتورة'}
+                                  className="h-8 w-8 bg-error-container/20 hover:bg-error-container text-error hover:text-on-error-container rounded-lg transition-colors inline-flex items-center justify-center border border-error/30"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1293,6 +1325,7 @@ export default function AdminPage() {
         <InvoiceModal
           invoice={adminPreviewInvoice}
           onClose={() => setAdminPreviewInvoice(null)}
+          onDelete={() => handleDeleteSessionClick(adminPreviewInvoice)}
         />
       )}
     </div>

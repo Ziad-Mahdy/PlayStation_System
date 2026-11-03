@@ -1,26 +1,29 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const supabaseService = {
-  // ── Devices (معزولة لكل مشترك بـ الكود / الهاتف) ──
+  // ── Devices (معزولة لكل مشترك بـ الكود الخاص به لضمان بدء كل كود ببيانات نظيفة) ──
   async fetchDevices(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
-      const clientPhone = phone || identifier;
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+      let query = supabase.from('devices').select('*');
+      // إذا كان المعرف هو كود اشتراك PS- نقوم بجلب أجهزة هذا الكود حصراً
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        query = query.eq('client_code', identifier);
+      } else {
+        const clientPhone = phone || identifier;
+        const orFilter = identifier === clientPhone
+          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+        query = query.or(orFilter);
+      }
 
-      let { data, error } = await supabase
-        .from('devices')
-        .select('*')
-        .or(orFilter)
-        .order('id', { ascending: true });
+      let { data, error } = await query.order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('devices')
           .select('*')
-          .eq('client_phone', clientPhone)
+          .eq('client_phone', phone || identifier)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -65,17 +68,15 @@ export const supabaseService = {
       const clientPhone = phone || identifier;
       const trimmedName = device.name.trim();
 
-      // فحص مسبق: إذا كان الجهاز مسجلاً بالفعل في قاعدة البيانات نرجعه دون إدخال مكرر
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+      // فحص مسبق: إذا كان الجهاز مسجلاً بالفعل لهذا الكود نرجعه دون إدخال مكرر
+      let checkQuery = supabase.from('devices').select('*').eq('name', trimmedName);
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        checkQuery = checkQuery.eq('client_code', identifier);
+      } else {
+        checkQuery = checkQuery.or(`client_code.eq.${identifier},client_phone.eq.${clientPhone}`);
+      }
 
-      const { data: existing } = await supabase
-        .from('devices')
-        .select('*')
-        .eq('name', trimmedName)
-        .or(orFilter)
-        .limit(1);
+      const { data: existing } = await checkQuery.limit(1);
 
       if (existing && existing.length > 0) {
         return existing[0];
@@ -165,26 +166,28 @@ export const supabaseService = {
     }
   },
 
-  // ── Categories ──
+  // ── Categories (معزولة لكل كود اشتراك) ──
   async fetchCategories(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
-      const clientPhone = phone || identifier;
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+      let query = supabase.from('categories').select('name');
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        query = query.eq('client_code', identifier);
+      } else {
+        const clientPhone = phone || identifier;
+        const orFilter = identifier === clientPhone
+          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+        query = query.or(orFilter);
+      }
 
-      let { data, error } = await supabase
-        .from('categories')
-        .select('name')
-        .or(orFilter)
-        .order('id', { ascending: true });
+      let { data, error } = await query.order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('categories')
           .select('name')
-          .eq('client_phone', clientPhone)
+          .eq('client_phone', phone || identifier)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -217,41 +220,41 @@ export const supabaseService = {
   async deleteCategory(name, identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return;
     try {
-      const clientPhone = phone || identifier;
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
-
-      await supabase
-        .from('categories')
-        .delete()
-        .eq('name', name)
-        .or(orFilter);
+      let query = supabase.from('categories').delete().eq('name', name);
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        query = query.eq('client_code', identifier);
+      } else {
+        const clientPhone = phone || identifier;
+        query = query.or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
+      }
+      await query;
     } catch (err) {
       console.error('deleteCategory exception:', err);
     }
   },
 
-  // ── Products (البوفيه والمشروبات معزولة لكل مشترك) ──
+  // ── Products (معزولة لكل كود اشتراك لضمان بداية نظيفة لكل كود) ──
   async fetchProducts(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
-      const clientPhone = phone || identifier;
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+      let query = supabase.from('products').select('*');
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        query = query.eq('client_code', identifier);
+      } else {
+        const clientPhone = phone || identifier;
+        const orFilter = identifier === clientPhone
+          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+        query = query.or(orFilter);
+      }
 
-      let { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .or(orFilter)
-        .order('id', { ascending: true });
+      let { data, error } = await query.order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('products')
           .select('*')
-          .eq('client_phone', clientPhone)
+          .eq('client_phone', phone || identifier)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -288,17 +291,15 @@ export const supabaseService = {
       const clientPhone = phone || identifier;
       const trimmedName = product.name.trim();
 
-      // فحص مسبق: إذا كان المنتج مسجلاً بالفعل في قاعدة البيانات نرجعه دون إدخال مكرر
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+      // فحص مسبق: إذا كان المنتج مسجلاً بالفعل لهذا الكود نرجعه دون إدخال مكرر
+      let checkQuery = supabase.from('products').select('*').eq('name', trimmedName);
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        checkQuery = checkQuery.eq('client_code', identifier);
+      } else {
+        checkQuery = checkQuery.or(`client_code.eq.${identifier},client_phone.eq.${clientPhone}`);
+      }
 
-      const { data: existing } = await supabase
-        .from('products')
-        .select('*')
-        .eq('name', trimmedName)
-        .or(orFilter)
-        .limit(1);
+      const { data: existing } = await checkQuery.limit(1);
 
       if (existing && existing.length > 0) {
         return existing[0];
@@ -369,26 +370,28 @@ export const supabaseService = {
     }
   },
 
-  // ── Completed Sessions / Invoices ──
+  // ── Completed Sessions / Invoices (معزولة لكل كود اشتراك) ──
   async fetchCompletedSessions(identifier, phone = null) {
     if (!isSupabaseConfigured || !identifier) return [];
     try {
-      const clientPhone = phone || identifier;
-      const orFilter = identifier === clientPhone
-        ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-        : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+      let query = supabase.from('completed_sessions').select('*');
+      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
+        query = query.eq('client_code', identifier);
+      } else {
+        const clientPhone = phone || identifier;
+        const orFilter = identifier === clientPhone
+          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
+          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
+        query = query.or(orFilter);
+      }
 
-      let { data, error } = await supabase
-        .from('completed_sessions')
-        .select('*')
-        .or(orFilter)
-        .order('id', { ascending: true });
+      let { data, error } = await query.order('id', { ascending: true });
 
       if (error && error.code === '42703') {
         const res = await supabase
           .from('completed_sessions')
           .select('*')
-          .eq('client_phone', clientPhone)
+          .eq('client_phone', phone || identifier)
           .order('id', { ascending: true });
         data = res.data;
         error = res.error;
@@ -457,15 +460,44 @@ export const supabaseService = {
     }
   },
 
-  async clearCompletedSessions(identifier) {
-    if (!isSupabaseConfigured || !identifier) return;
+  // ── حذف فاتورة فردية نهائياً ──
+  async deleteCompletedSession(id) {
+    if (!isSupabaseConfigured || !id) return false;
     try {
-      await supabase
+      const { error } = await supabase
         .from('completed_sessions')
         .delete()
-        .or(`client_code.eq.${identifier},client_phone.eq.${identifier}`);
+        .eq('id', id);
+      if (error) {
+        console.error('Error deleting completed session:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('deleteCompletedSession exception:', err);
+      return false;
+    }
+  },
+
+  // ── مسح وتصفير فواتير المشترك بالكامل ──
+  async clearCompletedSessions(identifier, phone = null) {
+    if (!isSupabaseConfigured || !identifier) return false;
+    try {
+      const conditions = [];
+      if (identifier) conditions.push(`client_code.eq.${identifier}`);
+      if (phone) conditions.push(`client_phone.eq.${phone}`);
+      if (phone) conditions.push(`client_code.eq.${phone}`);
+      if (identifier) conditions.push(`client_phone.eq.${identifier}`);
+
+      const { error } = await supabase
+        .from('completed_sessions')
+        .delete()
+        .or(conditions.join(','));
+      if (error) console.error('Error clearing completed sessions:', error);
+      return !error;
     } catch (err) {
       console.error('clearCompletedSessions exception:', err);
+      return false;
     }
   },
 
