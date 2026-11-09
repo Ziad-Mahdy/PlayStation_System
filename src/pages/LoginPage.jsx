@@ -17,6 +17,7 @@ export default function LoginPage() {
   // Client form
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [showCode, setShowCode] = useState(false);
 
   const isEn = language === 'en';
 
@@ -117,14 +118,27 @@ export default function LoginPage() {
               <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-primary">key</span>
               {t('login_code_label')}
             </label>
-            <input
-              type="text"
-              placeholder="PS-XXXX-XXXX"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-center tracking-widest placeholder:tracking-normal placeholder:text-outline/50 transition-all font-mono font-bold text-sm sm:text-base"
-              required
-            />
+            <div className="relative flex items-center">
+              <input
+                type={showCode ? 'text' : 'password'}
+                placeholder="PS-XXXX-XXXX"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full h-11 sm:h-12 px-10 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary text-center tracking-widest placeholder:tracking-normal placeholder:text-outline/50 transition-all font-mono font-bold text-sm sm:text-base"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCode(!showCode)}
+                className="absolute end-3 p-1 text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center cursor-pointer select-none"
+                tabIndex={-1}
+                title={showCode ? (isEn ? 'Hide Code' : 'إخفاء الكود') : (isEn ? 'Show Code' : 'إظهار الكود')}
+              >
+                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">
+                  {showCode ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
+            </div>
             <p className="text-[11px] sm:text-[12px] text-on-surface-variant/80 mt-0.5">
               {t('login_code_hint')}
             </p>
