@@ -9,6 +9,36 @@ import InvoiceModal from '../components/devices/InvoiceModal';
 import toast from 'react-hot-toast';
 import { showConfirm } from '../lib/swal';
 
+// ── Helpers للتواريخ والفترات ──
+const formatDateToISO = (date) => {
+  if (!date || isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const getFirstDayOfMonth = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+};
+
+const getTodayDate = () => {
+  return new Date();
+};
+
+const isTodaySession = (timestamp) => {
+  if (!timestamp) return false;
+  const d = new Date(Number(timestamp));
+  const now = new Date();
+  return (
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear()
+  );
+};
+
+
 export default function AdminPage() {
   const navigate = useNavigate();
   const exitAdmin = useAuthStore((s) => s.exitAdmin);
@@ -33,13 +63,21 @@ export default function AdminPage() {
   const updateProduct = useAdminStore((s) => s.updateProduct);
   const deleteProduct = useAdminStore((s) => s.deleteProduct);
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState('finances'); // 'finances' | 'rates' | 'products'
+  // Active Tab: 'finances' | 'monthly' | 'rates' | 'products'
+  const [activeTab, setActiveTab] = useState('finances');
 
   // Sessions Pagination State (Max 5 per page)
   const [adminSessionPage, setAdminSessionPage] = useState(1);
   const [adminPreviewInvoice, setAdminPreviewInvoice] = useState(null);
   const SESSIONS_PER_PAGE = 5;
+
+  // ── Monthly & Period Reports State ──
+  const [reportStartDate, setReportStartDate] = useState(() => formatDateToISO(getFirstDayOfMonth()));
+  const [reportEndDate, setReportEndDate] = useState(() => formatDateToISO(getTodayDate()));
+  const [reportPreset, setReportPreset] = useState('this_month');
+  const [reportSearch, setReportSearch] = useState('');
+  const [reportPage, setReportPage] = useState(1);
+  const REPORT_PER_PAGE = 10;
 
   // Categories management state
   const [newCategoryInput, setNewCategoryInput] = useState('');
@@ -68,13 +106,18 @@ export default function AdminPage() {
   // Search in completed sessions
   const [sessionSearch, setSessionSearch] = useState('');
 
-  // ── Financial Calculations ──
+  // ── Today Sessions (Tab 1) ──
+  const todaySessions = useMemo(() => {
+    return completedSessions.filter((s) => isTodaySession(s.endTime || s.startTime));
+  }, [completedSessions]);
+
+  // ── Today Financial Calculations (Tab 1) ──
   const finances = useMemo(() => {
     let totalRevenue = 0;
     let timeRevenue = 0;
     let ordersRevenue = 0;
 
-    completedSessions.forEach((s) => {
+    todaySessions.forEach((s) => {
       totalRevenue += s.total || 0;
       timeRevenue += s.timeCost || 0;
       ordersRevenue += s.ordersCost || 0;
@@ -84,13 +127,13 @@ export default function AdminPage() {
       totalRevenue: totalRevenue.toFixed(2),
       timeRevenue: timeRevenue.toFixed(2),
       ordersRevenue: ordersRevenue.toFixed(2),
-      sessionsCount: completedSessions.length,
+      sessionsCount: todaySessions.length,
     };
-  }, [completedSessions]);
+  }, [todaySessions]);
 
-  // Filtered completed sessions (newest first)
+  // Filtered today completed sessions (newest first)
   const filteredSessions = useMemo(() => {
-    const list = [...completedSessions].reverse();
+    const list = [...todaySessions].reverse();
     if (!sessionSearch.trim()) return list;
     const q = sessionSearch.trim().toLowerCase();
     return list.filter(
@@ -99,13 +142,264 @@ export default function AdminPage() {
         s.customerName?.toLowerCase().includes(q) ||
         s.mode?.toLowerCase().includes(q)
     );
-  }, [completedSessions, sessionSearch]);
+  }, [todaySessions, sessionSearch]);
 
   // Admin Pagination calculations
   const totalSessionPages = Math.max(1, Math.ceil(filteredSessions.length / SESSIONS_PER_PAGE));
   const validSessionPage = Math.min(adminSessionPage, totalSessionPages);
   const startSessionIdx = (validSessionPage - 1) * SESSIONS_PER_PAGE;
   const paginatedSessions = filteredSessions.slice(startSessionIdx, startSessionIdx + SESSIONS_PER_PAGE);
+
+  // ── Preset change handler for Monthly / Period Reports ──
+  const handleApplyPreset = (presetKey) => {
+    setReportPreset(presetKey);
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+
+    if (presetKey === 'this_month') {
+      setReportStartDate(formatDateToISO(new Date(y, m, 1)));
+      setReportEndDate(formatDateToISO(now));
+    } else if (presetKey === 'last_month') {
+      setReportStartDate(formatDateToISO(new Date(y, m - 1, 1)));
+      setReportEndDate(formatDateToISO(new Date(y, m, 0)));
+    } else if (presetKey === 'today') {
+      setReportStartDate(formatDateToISO(now));
+      setReportEndDate(formatDateToISO(now));
+    } else if (presetKey === 'yesterday') {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      setReportStartDate(formatDateToISO(yesterday));
+      setReportEndDate(formatDateToISO(yesterday));
+    } else if (presetKey === '7days') {
+      const d7 = new Date(now);
+      d7.setDate(d7.getDate() - 6);
+      setReportStartDate(formatDateToISO(d7));
+      setReportEndDate(formatDateToISO(now));
+    } else if (presetKey === '30days') {
+      const d30 = new Date(now);
+      d30.setDate(d30.getDate() - 29);
+      setReportStartDate(formatDateToISO(d30));
+      setReportEndDate(formatDateToISO(now));
+    } else if (presetKey === 'all') {
+      setReportStartDate('');
+      setReportEndDate('');
+    }
+    setReportPage(1);
+  };
+
+  // ── Period Filtered Sessions (Tab 2) ──
+  const periodFilteredSessions = useMemo(() => {
+    let list = [...completedSessions];
+
+    let startMs = 0;
+    let endMs = Infinity;
+
+    if (reportStartDate) {
+      const s = new Date(reportStartDate + 'T00:00:00');
+      if (!isNaN(s.getTime())) startMs = s.getTime();
+    }
+    if (reportEndDate) {
+      const e = new Date(reportEndDate + 'T23:59:59.999');
+      if (!isNaN(e.getTime())) endMs = e.getTime();
+    }
+
+    if (startMs > endMs && endMs !== Infinity) {
+      const temp = startMs;
+      startMs = endMs;
+      endMs = temp;
+    }
+
+    if (reportStartDate || reportEndDate) {
+      list = list.filter((session) => {
+        const time = Number(session.endTime || session.startTime);
+        if (!time) return false;
+        return time >= startMs && time <= endMs;
+      });
+    }
+
+    // Sort newest first
+    list.sort((a, b) => Number(b.endTime || b.startTime) - Number(a.endTime || a.startTime));
+
+    // Search filter
+    if (reportSearch.trim()) {
+      const q = reportSearch.trim().toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.deviceName?.toLowerCase().includes(q) ||
+          s.customerName?.toLowerCase().includes(q) ||
+          s.deviceType?.toLowerCase().includes(q) ||
+          s.mode?.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [completedSessions, reportStartDate, reportEndDate, reportSearch]);
+
+  // ── Period Financial Calculations (Tab 2) ──
+  const periodFinances = useMemo(() => {
+    let totalRevenue = 0;
+    let timeRevenue = 0;
+    let ordersRevenue = 0;
+    const deviceEarnings = {};
+
+    periodFilteredSessions.forEach((s) => {
+      const tot = s.total || 0;
+      totalRevenue += tot;
+      timeRevenue += s.timeCost || 0;
+      ordersRevenue += s.ordersCost || 0;
+
+      const dev = s.deviceName || (isEn ? 'Unnamed Device' : 'جهاز غير مسمى');
+      deviceEarnings[dev] = (deviceEarnings[dev] || 0) + tot;
+    });
+
+    let topDevice = null;
+    let maxDevEarn = 0;
+    for (const [dev, earn] of Object.entries(deviceEarnings)) {
+      if (earn > maxDevEarn) {
+        maxDevEarn = earn;
+        topDevice = { name: dev, total: earn.toFixed(2) };
+      }
+    }
+
+    const count = periodFilteredSessions.length;
+    const avgInvoice = count > 0 ? (totalRevenue / count).toFixed(2) : '0.00';
+
+    return {
+      totalRevenue: totalRevenue.toFixed(2),
+      timeRevenue: timeRevenue.toFixed(2),
+      ordersRevenue: ordersRevenue.toFixed(2),
+      sessionsCount: count,
+      avgInvoice,
+      topDevice,
+    };
+  }, [periodFilteredSessions, isEn]);
+
+  // Period pagination calculations
+  const totalReportPages = Math.max(1, Math.ceil(periodFilteredSessions.length / REPORT_PER_PAGE));
+  const validReportPage = Math.min(reportPage, totalReportPages);
+  const startReportIdx = (validReportPage - 1) * REPORT_PER_PAGE;
+  const paginatedReportSessions = periodFilteredSessions.slice(
+    startReportIdx,
+    startReportIdx + REPORT_PER_PAGE
+  );
+
+  // ── Print Period Report Handler ──
+  const handlePrintPeriodReport = () => {
+    const printWindow = window.open('', '_blank', 'width=950,height=750');
+    if (!printWindow) {
+      toast.error(isEn ? 'Please allow popups to print report' : 'يرجى السماح بالنوافذ المنبثقة لطباعة التقرير');
+      return;
+    }
+
+    const rangeTitle = reportStartDate && reportEndDate
+      ? (isEn ? `From ${reportStartDate} to ${reportEndDate}` : `من ${reportStartDate} إلى ${reportEndDate}`)
+      : reportStartDate
+      ? (isEn ? `From ${reportStartDate}` : `من ${reportStartDate}`)
+      : (isEn ? 'All recorded invoices' : 'جميع الفواتير المسجلة');
+
+    const html = `
+      <!DOCTYPE html>
+      <html dir="${isEn ? 'ltr' : 'rtl'}" lang="${isEn ? 'en' : 'ar'}">
+      <head>
+        <meta charset="utf-8" />
+        <title>${isEn ? 'Revenue Report' : 'تقرير الإيرادات'} - ${rangeTitle}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #111; direction: ${isEn ? 'ltr' : 'rtl'}; }
+          .header { text-align: center; border-bottom: 2px solid #222; padding-bottom: 14px; margin-bottom: 18px; }
+          .title { font-size: 22px; font-weight: bold; margin-bottom: 4px; color: #000; }
+          .subtitle { font-size: 13px; color: #444; }
+          .meta { font-size: 11px; color: #666; margin-top: 4px; }
+          .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+          .stat-box { border: 1px solid #ccc; border-radius: 8px; padding: 12px; text-align: center; background: #f8f9fa; }
+          .stat-label { font-size: 11px; color: #555; margin-bottom: 4px; font-weight: 600; }
+          .stat-val { font-size: 18px; font-weight: bold; color: #000; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+          th, td { border: 1px solid #ccc; padding: 7px 9px; text-align: ${isEn ? 'left' : 'right'}; }
+          th { background: #e9ecef; font-weight: bold; }
+          tr:nth-child(even) { background: #fdfdfd; }
+          .text-total { font-weight: bold; }
+          .footer { margin-top: 24px; text-align: center; font-size: 11px; color: #888; border-top: 1px solid #ddd; padding-top: 8px; }
+          @media print {
+            body { padding: 8px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">${isEn ? 'PlayStation Lounge Management System' : 'نظام إدارة صالة البلايستيشن'}</div>
+          <div class="subtitle">${isEn ? 'Period Invoices & Revenue Report' : 'تقرير الإيرادات وسجل فواتير الفترة'}: <strong>${rangeTitle}</strong></div>
+          <div class="meta">${isEn ? 'Generated on:' : 'تاريخ وتوقيت الاستخراج:'} ${new Date().toLocaleString(isEn ? 'en-US' : 'ar-EG')}</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">${isEn ? 'Total Revenue' : 'إجمالي الإيرادات'}</div>
+            <div class="stat-val">${periodFinances.totalRevenue} ${isEn ? 'EGP' : 'ج.م'}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">${isEn ? 'Device Time' : 'إيراد وقت الأجهزة'}</div>
+            <div class="stat-val">${periodFinances.timeRevenue} ${isEn ? 'EGP' : 'ج.م'}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">${isEn ? 'Buffet & Drinks' : 'إيراد البوفيه والمشاريب'}</div>
+            <div class="stat-val">${periodFinances.ordersRevenue} ${isEn ? 'EGP' : 'ج.م'}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">${isEn ? 'Invoices Settled' : 'عدد الفواتير المنفذة'}</div>
+            <div class="stat-val">${periodFinances.sessionsCount}</div>
+          </div>
+        </div>
+
+        <h4 style="margin-bottom: 6px; font-size: 13px;">${isEn ? 'Invoices List' : 'سجل الفواتير التفصيلي'} (${periodFilteredSessions.length})</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>${isEn ? 'Device' : 'الجهاز'}</th>
+              <th>${isEn ? 'Customer' : 'العميل'}</th>
+              <th>${isEn ? 'Date & Time' : 'التاريخ والوقت'}</th>
+              <th>${isEn ? 'Mode' : 'النوع'}</th>
+              <th>${isEn ? 'Duration' : 'المدة'}</th>
+              <th>${isEn ? 'Time Cost' : 'حساب الوقت'}</th>
+              <th>${isEn ? 'Orders Cost' : 'حساب البوفيه'}</th>
+              <th>${isEn ? 'Total' : 'الإجمالي'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${periodFilteredSessions.map((s, idx) => `
+              <tr>
+                <td>#${s.id || idx + 1}</td>
+                <td><strong>${s.deviceName || '-'}</strong> ${s.isVIP ? '(VIP)' : ''}</td>
+                <td>${s.customerName || '-'}</td>
+                <td>${new Date(s.endTime || Date.now()).toLocaleString(isEn ? 'en-US' : 'ar-EG', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                <td>${s.mode === 'single' ? (isEn ? 'Single' : 'فردي') : (isEn ? 'Multi' : 'جماعي')}</td>
+                <td>${formatTime(s.durationSeconds || 0)}</td>
+                <td>${(s.timeCost || 0).toFixed(2)}</td>
+                <td>${(s.ordersCost || 0).toFixed(2)}</td>
+                <td class="text-total">${(s.total || 0).toFixed(2)} ${isEn ? 'EGP' : 'ج.م'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          ${isEn ? 'PlayStation System - Financial Reports' : 'نظام بلايستيشن كافيه - التقارير المالية والإدارية'}
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   // Handle product save
   const handleSaveProduct = async (e) => {
@@ -346,18 +640,18 @@ export default function AdminPage() {
 
   const handleClearSessions = async () => {
     const ok = await showConfirm({
-      title: isEn ? 'Clear Today\'s Shift Invoices?' : 'مسح فواتير اليوم؟',
+      title: isEn ? 'Clear Today\'s Shift Invoices?' : 'مسح وتصفير فواتير اليوم؟',
       text: isEn
-        ? 'Warning: Are you sure you want to clear and reset all today\'s closed shift invoices? This action cannot be undone.'
-        : 'تحذير: هل أنت متأكد من مسح جميع سجلات وفواتير اليوم المقفلة؟ لا يمكن التراجع عن هذا الإجراء.',
-      confirmButtonText: isEn ? 'Yes, Clear All' : 'نعم، مسح السجلات',
+        ? 'Are you sure you want to clear today\'s invoices? Past days will remain preserved for monthly reports.'
+        : 'هل أنت متأكد من مسح وتصفير فواتير اليوم؟ (سيتم الاحتفاظ بالأيام السابقة في تقارير الشهر دون مساس).',
+      confirmButtonText: isEn ? 'Yes, Clear Today' : 'نعم، تصفير فواتير اليوم',
       cancelButtonText: isEn ? 'Cancel' : 'إلغاء',
       icon: 'warning',
       isDanger: true,
     });
     if (ok) {
-      await clearCompletedSessions();
-      toast.success(isEn ? 'Today\'s shift invoices cleared' : 'تم تصفير حسابات اليوم');
+      await clearCompletedSessions(true);
+      toast.success(isEn ? 'Today\'s invoices cleared' : 'تم تصفير فواتير اليوم بنجاح');
     }
   };
 
@@ -418,47 +712,66 @@ export default function AdminPage() {
 
       {/* ── Navigation Tabs ── */}
       <div className="flex items-center gap-1.5 sm:gap-space-sm bg-surface-container-lowest p-1.5 sm:p-2 rounded-2xl border border-outline-variant/20 shadow-md overflow-x-auto scrollbar-none w-full">
+        {/* Tab 1: حسابات وإيرادات اليوم */}
         <button
           onClick={() => setActiveTab('finances')}
-          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 ${
+          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 cursor-pointer ${
             activeTab === 'finances'
-              ? 'bg-primary-container text-on-primary-container shadow-md'
+              ? 'bg-primary-container text-on-primary-container shadow-md font-bold'
               : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-[18px] sm:text-[20px]">account_balance_wallet</span>
           <span>{t('admin_tab_finances')}</span>
-          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full">
-            {completedSessions.length}
+          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-bold">
+            {todaySessions.length}
           </span>
         </button>
 
+        {/* Tab 2: إيرادات الشهر والتقارير */}
+        <button
+          onClick={() => setActiveTab('monthly')}
+          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 cursor-pointer ${
+            activeTab === 'monthly'
+              ? 'bg-primary-container text-on-primary-container shadow-md font-bold'
+              : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px] sm:text-[20px]">calendar_month</span>
+          <span>{t('admin_tab_monthly')}</span>
+          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-mono font-bold">
+            {periodFilteredSessions.length}
+          </span>
+        </button>
+
+        {/* Tab 3: إدارة الأجهزة والأسعار */}
         <button
           onClick={() => setActiveTab('rates')}
-          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 ${
+          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 cursor-pointer ${
             activeTab === 'rates'
-              ? 'bg-primary-container text-on-primary-container shadow-md'
+              ? 'bg-primary-container text-on-primary-container shadow-md font-bold'
               : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-[18px] sm:text-[20px]">sports_esports</span>
           <span>{t('admin_tab_rates')}</span>
-          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full">
+          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
             {t('admin_devices_count', devices.length)}
           </span>
         </button>
 
+        {/* Tab 4: المنتجات والمشاريب */}
         <button
           onClick={() => setActiveTab('products')}
-          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 ${
+          className={`flex items-center gap-1 sm:gap-space-xs px-3 sm:px-space-lg py-2 sm:py-3 rounded-xl font-headline-sm text-xs sm:text-headline-sm transition-all shrink-0 cursor-pointer ${
             activeTab === 'products'
-              ? 'bg-primary-container text-on-primary-container shadow-md'
+              ? 'bg-primary-container text-on-primary-container shadow-md font-bold'
               : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
           <span className="material-symbols-outlined text-[18px] sm:text-[20px]">restaurant_menu</span>
           <span>{t('admin_tab_products')}</span>
-          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full">
+          <span className="bg-surface-container-highest/60 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-mono">
             {t('admin_products_count', products.length)}
           </span>
         </button>
@@ -586,14 +899,22 @@ export default function AdminPage() {
             </div>
 
             {filteredSessions.length === 0 ? (
-              <div className="p-space-xl text-center py-12 sm:py-16 text-on-surface-variant">
+              <div className="p-space-xl text-center py-12 sm:py-16 text-on-surface-variant flex flex-col items-center">
                 <span className="material-symbols-outlined text-[48px] text-outline mb-2">
                   receipt_long
                 </span>
                 <p className="font-headline-sm text-headline-sm">{t('worker_no_invoices')}</p>
-                <p className="font-body-sm text-body-sm text-outline mt-1">
+                <p className="font-body-sm text-body-sm text-outline mt-1 mb-4">
                   {t('worker_no_invoices_hint')}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('monthly')}
+                  className="px-4 py-2 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-xl font-label-md text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                  <span>{isEn ? 'View Monthly & Historical Invoices' : 'عرض سجل وتقارير إيرادات الشهر'}</span>
+                </button>
               </div>
             ) : (
               <div>
@@ -756,7 +1077,498 @@ export default function AdminPage() {
       )}
 
       {/* ═══════════════════════════════════════════════
-          TAB 2: DEVICES & RATES (إدارة الأجهزة والأسعار)
+          TAB 2: MONTHLY & PERIOD REPORTS (إيرادات الشهر والتقارير)
+         ═══════════════════════════════════════════════ */}
+      {activeTab === 'monthly' && (
+        <div className="flex flex-col gap-3 sm:gap-space-lg">
+          {/* Header & Date Range Filter Section */}
+          <div className="bg-surface-container-low p-3.5 sm:p-space-lg rounded-2xl border border-primary/20 shadow-lg flex flex-col gap-3 sm:gap-space-md">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[24px]">calendar_month</span>
+                  <h2 className="font-headline-md text-base sm:text-headline-md text-on-surface">
+                    {t('admin_reports_title')}
+                  </h2>
+                </div>
+                <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant mt-0.5">
+                  {t('admin_reports_subtitle')}
+                </p>
+              </div>
+
+              {/* Print Report Button */}
+              {periodFilteredSessions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handlePrintPeriodReport}
+                  className="h-10 px-3.5 sm:px-4 bg-primary text-on-primary font-headline-sm text-xs sm:text-sm rounded-xl flex items-center justify-center gap-1.5 shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer self-stretch lg:self-auto shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[18px]">print</span>
+                  <span>{t('admin_report_print_btn')}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Date Pickers & Range Selectors */}
+            <div className="pt-2 sm:pt-3 border-t border-outline-variant/20 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
+              {/* From / To Date Pickers */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {/* From Date */}
+                <div className="flex items-center gap-1.5 bg-surface-container px-3 py-1.5 rounded-xl border border-outline-variant/30">
+                  <span className="material-symbols-outlined text-[18px] text-primary">calendar_today</span>
+                  <span className="font-label-md text-xs text-on-surface-variant whitespace-nowrap">
+                    {t('admin_filter_from')}:
+                  </span>
+                  <input
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(e) => {
+                      setReportStartDate(e.target.value);
+                      setReportPreset('custom');
+                      setReportPage(1);
+                    }}
+                    className="bg-transparent text-on-surface font-mono text-xs sm:text-sm outline-none cursor-pointer [color-scheme:dark]"
+                  />
+                </div>
+
+                {/* To Date */}
+                <div className="flex items-center gap-1.5 bg-surface-container px-3 py-1.5 rounded-xl border border-outline-variant/30">
+                  <span className="material-symbols-outlined text-[18px] text-secondary">event</span>
+                  <span className="font-label-md text-xs text-on-surface-variant whitespace-nowrap">
+                    {t('admin_filter_to')}:
+                  </span>
+                  <input
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(e) => {
+                      setReportEndDate(e.target.value);
+                      setReportPreset('custom');
+                      setReportPage(1);
+                    }}
+                    className="bg-transparent text-on-surface font-mono text-xs sm:text-sm outline-none cursor-pointer [color-scheme:dark]"
+                  />
+                </div>
+
+                {/* Active Period Label Pill */}
+                <div className="hidden md:flex items-center gap-1 text-[11px] text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg">
+                  <span className="material-symbols-outlined text-[14px]">info</span>
+                  <span>
+                    {reportStartDate && reportEndDate
+                      ? (isEn ? `Range: ${reportStartDate} → ${reportEndDate}` : `الفترة: ${reportStartDate} إلى ${reportEndDate}`)
+                      : (isEn ? 'All recorded invoices' : 'جميع الفواتير المسجلة')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-1">
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('this_month')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === 'this_month'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_this_month')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('last_month')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === 'last_month'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_last_month')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('30days')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === '30days'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_30days')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('7days')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === '7days'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_7days')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('today')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === 'today'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_today')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('yesterday')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === 'yesterday'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_yesterday')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('all')}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-headline-sm transition-all whitespace-nowrap cursor-pointer ${
+                    reportPreset === 'all'
+                      ? 'bg-primary text-on-primary shadow-md font-bold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  {t('admin_preset_all')}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Period Financial Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-space-md">
+            {/* Total Period Revenue */}
+            <div className="bg-surface-container-low p-3 sm:p-space-lg rounded-2xl border border-secondary/30 relative overflow-hidden shadow-lg">
+              <div className="absolute top-0 right-0 left-0 h-1 bg-secondary"></div>
+              <div className="flex items-center justify-between">
+                <span className="font-label-lg text-xs sm:text-label-lg text-on-surface-variant line-clamp-1">
+                  {t('admin_report_total_revenue')}
+                </span>
+                <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px] sm:text-[24px]">payments</span>
+                </span>
+              </div>
+              <div className="mt-2 sm:mt-space-sm flex items-baseline">
+                <span className="font-display-lg text-lg sm:text-2xl lg:text-display-lg text-secondary font-black truncate">
+                  {periodFinances.totalRevenue}
+                </span>
+                <span className="font-headline-sm text-xs sm:text-headline-sm text-on-surface mr-1">{t('card_egp')}</span>
+              </div>
+              <p className="font-body-sm text-[11px] sm:text-body-sm text-outline mt-1 line-clamp-1 sm:line-clamp-none">
+                {t('admin_report_total_revenue_sub')}
+              </p>
+            </div>
+
+            {/* Time Revenue */}
+            <div className="bg-surface-container-low p-3 sm:p-space-lg rounded-2xl border border-primary/30 relative overflow-hidden shadow-lg">
+              <div className="absolute top-0 right-0 left-0 h-1 bg-primary"></div>
+              <div className="flex items-center justify-between">
+                <span className="font-label-lg text-xs sm:text-label-lg text-on-surface-variant line-clamp-1">
+                  {t('admin_report_time_revenue')}
+                </span>
+                <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px] sm:text-[24px]">schedule</span>
+                </span>
+              </div>
+              <div className="mt-2 sm:mt-space-sm flex items-baseline">
+                <span className="font-display-lg text-lg sm:text-2xl lg:text-display-lg text-primary font-black truncate">
+                  {periodFinances.timeRevenue}
+                </span>
+                <span className="font-headline-sm text-xs sm:text-headline-sm text-on-surface mr-1">{t('card_egp')}</span>
+              </div>
+              <p className="font-body-sm text-[11px] sm:text-body-sm text-outline mt-1 line-clamp-1 sm:line-clamp-none">
+                {t('admin_report_time_revenue_sub')}
+              </p>
+            </div>
+
+            {/* Buffet / Orders Revenue */}
+            <div className="bg-surface-container-low p-3 sm:p-space-lg rounded-2xl border border-tertiary/30 relative overflow-hidden shadow-lg">
+              <div className="absolute top-0 right-0 left-0 h-1 bg-tertiary"></div>
+              <div className="flex items-center justify-between">
+                <span className="font-label-lg text-xs sm:text-label-lg text-on-surface-variant line-clamp-1">
+                  {t('admin_report_orders_revenue')}
+                </span>
+                <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px] sm:text-[24px]">local_cafe</span>
+                </span>
+              </div>
+              <div className="mt-2 sm:mt-space-sm flex items-baseline">
+                <span className="font-display-lg text-lg sm:text-2xl lg:text-display-lg text-tertiary font-black truncate">
+                  {periodFinances.ordersRevenue}
+                </span>
+                <span className="font-headline-sm text-xs sm:text-headline-sm text-on-surface mr-1">{t('card_egp')}</span>
+              </div>
+              <p className="font-body-sm text-[11px] sm:text-body-sm text-outline mt-1 line-clamp-1 sm:line-clamp-none">
+                {t('admin_report_orders_revenue_sub')}
+              </p>
+            </div>
+
+            {/* Invoices Count & Avg */}
+            <div className="bg-surface-container-low p-3 sm:p-space-lg rounded-2xl border border-outline-variant/30 relative overflow-hidden shadow-lg">
+              <div className="absolute top-0 right-0 left-0 h-1 bg-surface-variant"></div>
+              <div className="flex items-center justify-between">
+                <span className="font-label-lg text-xs sm:text-label-lg text-on-surface-variant line-clamp-1">
+                  {t('admin_report_invoices_count')}
+                </span>
+                <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-surface-container-high text-on-surface flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px] sm:text-[24px]">done_all</span>
+                </span>
+              </div>
+              <div className="mt-2 sm:mt-space-sm flex items-baseline">
+                <span className="font-display-lg text-lg sm:text-2xl lg:text-display-lg text-on-surface font-black truncate">
+                  {periodFinances.sessionsCount}
+                </span>
+                <span className="font-headline-sm text-xs sm:text-headline-sm text-on-surface mr-1">{t('worker_invoices_unit')}</span>
+              </div>
+              <p className="font-body-sm text-[11px] sm:text-body-sm text-outline mt-1 line-clamp-1 sm:line-clamp-none">
+                {t('admin_report_avg_invoice')}: {periodFinances.avgInvoice} {t('card_egp')}
+              </p>
+            </div>
+          </div>
+
+          {/* Mini Highlights Strip (Top Device & Info) */}
+          {periodFinances.topDevice && (
+            <div className="bg-surface-container-low px-4 py-2.5 rounded-xl border border-outline-variant/30 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-on-surface">
+                <span className="material-symbols-outlined text-secondary text-[18px]">workspace_premium</span>
+                <span className="font-bold">{t('admin_report_top_device')}:</span>
+                <span className="bg-secondary/20 text-secondary-fixed border border-secondary/30 px-2 py-0.5 rounded-lg font-bold">
+                  {periodFinances.topDevice.name}
+                </span>
+                <span className="text-on-surface-variant font-mono">
+                  ({periodFinances.topDevice.total} {t('card_egp')})
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                <span>{t('admin_report_avg_invoice')}:</span>
+                <span className="font-mono font-bold text-on-surface">
+                  {periodFinances.avgInvoice} {t('card_egp')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Period Invoices Detailed Table */}
+          <div className="bg-surface-container-low rounded-2xl border border-outline-variant/30 overflow-hidden shadow-lg">
+            <div className="p-3.5 sm:p-space-lg border-b border-outline-variant/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-space-md">
+              <div>
+                <h3 className="font-headline-md text-base sm:text-headline-md text-on-surface">
+                  {isEn ? 'Settled Invoices in Selected Period' : 'سجل فواتير الفترة المحددة'}
+                </h3>
+                <p className="font-body-sm text-xs sm:text-body-sm text-on-surface-variant mt-0.5">
+                  {isEn
+                    ? 'Review, reprint or manage invoices settled during the selected date range'
+                    : 'استعراض أو طباعة أو حذف جميع الفواتير المحصلة في الفترة المحددة'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-space-sm w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-72 md:w-80">
+                  <input
+                    type="text"
+                    value={reportSearch}
+                    onChange={(e) => {
+                      setReportSearch(e.target.value);
+                      setReportPage(1);
+                    }}
+                    placeholder={t('admin_report_search_invoices')}
+                    className="w-full h-11 bg-surface-container rounded-xl ps-10 sm:ps-11 pe-4 font-body-sm text-on-surface border border-outline-variant/30 outline-none focus:border-primary text-xs sm:text-sm placeholder:text-on-surface-variant transition-all shadow-inner"
+                  />
+                  <span className="material-symbols-outlined absolute start-3 sm:start-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
+                    search
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {periodFilteredSessions.length === 0 ? (
+              <div className="p-space-xl text-center py-12 sm:py-16 text-on-surface-variant">
+                <span className="material-symbols-outlined text-[48px] text-outline mb-2">
+                  event_busy
+                </span>
+                <p className="font-headline-sm text-headline-sm">{t('admin_report_no_invoices')}</p>
+                <p className="font-body-sm text-body-sm text-outline mt-1">
+                  {t('admin_report_no_invoices_hint')}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-start border-collapse min-w-[650px]">
+                    <thead>
+                      <tr className="bg-surface-container border-b border-outline-variant/20 text-on-surface-variant font-label-md text-xs sm:text-label-md">
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_num')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_device')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_datetime')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('invoice_type')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_duration')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_time')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_orders')}</th>
+                        <th className="p-2.5 sm:p-space-md">{t('worker_th_total')}</th>
+                        <th className="p-2.5 sm:p-space-md text-center">{t('worker_th_action')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10 font-body-md text-xs sm:text-body-md">
+                      {paginatedReportSessions.map((session, idx) => {
+                        const endTime = new Date(session.endTime || Date.now());
+                        const timeStr = endTime.toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true,
+                        });
+                        const dateStr = endTime.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        });
+
+                        return (
+                          <tr
+                            key={session.id || idx}
+                            className="hover:bg-surface-container/50 transition-colors"
+                          >
+                            <td className="p-2.5 sm:p-space-md text-outline font-label-sm font-mono text-xs">
+                              #{session.id || startReportIdx + idx + 1}
+                            </td>
+                            <td className="p-2.5 sm:p-space-md font-bold text-on-surface">
+                              <div className="flex items-center gap-1.5">
+                                <span>{session.deviceName}</span>
+                                {session.isVIP && (
+                                  <span className="text-[10px] bg-primary/20 text-primary-fixed px-1.5 py-0.5 rounded">
+                                    VIP ⭐
+                                  </span>
+                                )}
+                              </div>
+                              {session.customerName && (
+                                <div className="text-xs text-primary font-normal flex items-center gap-1 mt-0.5">
+                                  <span className="material-symbols-outlined text-[14px]">person</span>
+                                  <span>{session.customerName}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-2.5 sm:p-space-md text-on-surface text-xs">
+                              <span className="font-bold block text-primary-fixed">{timeStr}</span>
+                              <span className="text-outline">{dateStr}</span>
+                            </td>
+                            <td className="p-2.5 sm:p-space-md">
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                  session.mode === 'single'
+                                    ? 'bg-primary-container/20 text-primary'
+                                    : 'bg-secondary-container/20 text-secondary'
+                                }`}
+                              >
+                                {session.mode === 'single' ? t('worker_single') : t('worker_multi')}
+                              </span>
+                            </td>
+                            <td className="p-2.5 sm:p-space-md text-on-surface-variant font-mono text-xs sm:text-sm">
+                              {formatTime(session.durationSeconds || 0)}
+                            </td>
+                            <td className="p-2.5 sm:p-space-md text-primary font-bold">
+                              {session.timeCost?.toFixed(2)} {t('card_egp')}
+                            </td>
+                            <td className="p-2.5 sm:p-space-md text-tertiary font-bold">
+                              {session.ordersCost?.toFixed(2)} {t('card_egp')}
+                            </td>
+                            <td className="p-2.5 sm:p-space-md text-secondary font-extrabold text-sm sm:text-headline-sm">
+                              {session.total?.toFixed(2)} {t('card_egp')}
+                            </td>
+                            <td className="p-2.5 sm:p-space-md text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setAdminPreviewInvoice(session)}
+                                  className="h-8 px-2.5 bg-surface-container hover:bg-surface-container-high text-primary font-label-sm text-xs rounded-lg transition-colors inline-flex items-center gap-1 border border-outline-variant/30 cursor-pointer"
+                                  title={isEn ? 'Preview and print invoice' : 'معاينة وطباعة الفاتورة'}
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                                  <span>{t('worker_view')}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSessionClick(session)}
+                                  title={isEn ? 'Delete Invoice' : 'حذف الفاتورة'}
+                                  className="h-8 w-8 bg-error-container/20 hover:bg-error-container text-error hover:text-on-error-container rounded-lg transition-colors inline-flex items-center justify-center border border-error/30 cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Period Pagination Footer */}
+                {totalReportPages > 1 && (
+                  <div className="bg-surface-container px-3 sm:px-space-md py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant/20">
+                    <span className="text-xs text-on-surface-variant font-label-sm">
+                      {t('worker_page_of', validReportPage, totalReportPages, periodFilteredSessions.length)}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={validReportPage === 1}
+                        onClick={() => setReportPage((p) => Math.max(1, p - 1))}
+                        className="h-8 px-2.5 sm:px-3 rounded-lg text-xs bg-surface-container-high text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>{t('worker_prev')}</span>
+                      </button>
+
+                      {Array.from({ length: Math.min(totalReportPages, 7) }).map((_, i) => (
+                        <button
+                          key={i + 1}
+                          type="button"
+                          onClick={() => setReportPage(i + 1)}
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            validReportPage === i + 1
+                              ? 'bg-primary-container text-on-primary-container shadow-sm'
+                              : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        disabled={validReportPage === totalReportPages}
+                        onClick={() => setReportPage((p) => Math.min(totalReportPages, p + 1))}
+                        className="h-8 px-2.5 sm:px-3 rounded-lg text-xs bg-surface-container-high text-on-surface disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-container-highest flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>{t('worker_next')}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          TAB 3: DEVICES & RATES (إدارة الأجهزة والأسعار)
          ═══════════════════════════════════════════════ */}
       {activeTab === 'rates' && (
         <div className="flex flex-col gap-3 sm:gap-space-lg">

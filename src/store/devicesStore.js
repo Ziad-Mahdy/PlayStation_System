@@ -491,13 +491,27 @@ const useDevicesStore = create((set, get) => ({
     await supabaseService.deleteCompletedSession(sessionId);
   },
 
-  // ── تفريغ فواتير اليوم نهائياً ──
-  clearCompletedSessions: async () => {
+  // ── تفريغ فواتير اليوم مع الحفاظ التام على سجل الشهر والتقارير ──
+  clearCompletedSessions: async (onlyToday = true) => {
     const client = getClientSession();
     const identifier = client?.code || client?.phone;
-    set({ completedSessions: [], nextSessionId: 1 });
-    if (identifier) {
-      await supabaseService.clearCompletedSessions(identifier, client?.phone);
+
+    if (onlyToday) {
+      const now = new Date();
+      const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+      const remaining = get().completedSessions.filter(
+        (s) => Number(s.endTime || s.startTime) < startOfTodayMs
+      );
+      set({ completedSessions: remaining });
+      if (identifier) {
+        await supabaseService.clearCompletedSessions(identifier, client?.phone, true);
+      }
+    } else {
+      set({ completedSessions: [], nextSessionId: 1 });
+      if (identifier) {
+        await supabaseService.clearCompletedSessions(identifier, client?.phone, false);
+      }
     }
   },
 }));

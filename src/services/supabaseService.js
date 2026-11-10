@@ -479,8 +479,8 @@ export const supabaseService = {
     }
   },
 
-  // ── مسح وتصفير فواتير المشترك بالكامل ──
-  async clearCompletedSessions(identifier, phone = null) {
+  // ── مسح وتصفير فواتير المشترك (اليوم فقط أو بالكامل مع الحفاظ على سجل الشهر) ──
+  async clearCompletedSessions(identifier, phone = null, onlyToday = true) {
     if (!isSupabaseConfigured || !identifier) return false;
     try {
       const conditions = [];
@@ -489,10 +489,18 @@ export const supabaseService = {
       if (phone) conditions.push(`client_code.eq.${phone}`);
       if (identifier) conditions.push(`client_phone.eq.${identifier}`);
 
-      const { error } = await supabase
+      let query = supabase
         .from('completed_sessions')
         .delete()
         .or(conditions.join(','));
+
+      if (onlyToday) {
+        const now = new Date();
+        const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        query = query.gte('end_time', startOfTodayMs);
+      }
+
+      const { error } = await query;
       if (error) console.error('Error clearing completed sessions:', error);
       return !error;
     } catch (err) {
