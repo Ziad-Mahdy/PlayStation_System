@@ -77,7 +77,7 @@ export default function AdminPage() {
   const [reportPreset, setReportPreset] = useState('this_month');
   const [reportSearch, setReportSearch] = useState('');
   const [reportPage, setReportPage] = useState(1);
-  const REPORT_PER_PAGE = 10;
+  const REPORT_PER_PAGE = 5;
 
   // Categories management state
   const [newCategoryInput, setNewCategoryInput] = useState('');
