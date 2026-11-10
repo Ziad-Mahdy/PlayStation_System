@@ -885,16 +885,6 @@ export default function AdminPage() {
                     search
                   </span>
                 </div>
-
-                {completedSessions.length > 0 && (
-                  <button
-                    onClick={handleClearSessions}
-                    className="h-10 px-3 sm:px-space-md bg-error-container/20 hover:bg-error-container text-error hover:text-on-error-container font-label-md text-xs sm:text-sm rounded-xl transition-all border border-error/30 flex items-center justify-center gap-1 shrink-0"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-                    <span>{t('admin_clear_today')}</span>
-                  </button>
-                )}
               </div>
             </div>
 
