@@ -112,7 +112,6 @@ export default function Header() {
 
   const currentClient = useSubscriptionStore((s) => s.currentClient);
   const logoutClient = useSubscriptionStore((s) => s.logoutClient);
-  const isDevLoggedIn = useSubscriptionStore((s) => s.isDevLoggedIn);
 
   const language = useLanguageStore((s) => s.language);
   const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
@@ -208,18 +207,6 @@ export default function Header() {
 
           {/* ── Navigation Actions & Controls ── */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* If Developer is logged in, show quick Dev Panel button */}
-            {isDevLoggedIn && (
-              <button
-                type="button"
-                onClick={() => navigate('/dev-panel')}
-                className="h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-primary/10 text-primary border border-primary/25 hover:bg-primary/20 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">terminal</span>
-                <span className="hidden md:inline">{t('header_dev_panel')}</span>
-              </button>
-            )}
-
             {/* Language Switcher Button (عربي / English) */}
             <button
               type="button"
