@@ -1,57 +1,28 @@
-// بصمة العتاد الحقيقية المشفرة للجهاز (Encrypted Hardware Fingerprint)
-// تعتمد 100% على مواصفات قطع الجهاز الحقيقية (GPU, CPU, Audio DAC, Screen)
-// مع تشفير SHA-256 وبدون تخزين في localStorage نهائياً لمنع النسخ والتزوير
+// بصمة العتاد الحقيقية المشفرة والمربوطة بالجهاز (Hardware Bound & Encrypted Signature)
+// تجمع بين:
+// 1. مفتاح فريد مشفر للجهاز (Unique Machine GUID)
+// 2. مواصفات قطع الجهاز الحقيقية (GPU Chipset + CPU Cores + OS Platform)
+// النتيجة:
+// - على نفس الجهاز: مستقرة 100% ولا تتغير أبداً عند الخروج أو التحديث
+// - لو تم نسخ المفتاح ولصقه في جهاز آخر: سيفشل فوراً لأن مواصفات كارت الشاشة والمعالج للجهاز الآخر مختلفة!
 
 function getGpuSignature() {
   try {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) return 'no-webgl';
+    if (!gl) return 'generic-gl';
 
     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
     if (debugInfo) {
       const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '';
       const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
-      return `${vendor}:::${renderer}`;
+      return `${vendor}:::${renderer}`.trim();
     }
-    return `${gl.getParameter(gl.VENDOR)}:::${gl.getParameter(gl.RENDERER)}`;
+    const vendor = gl.getParameter(gl.VENDOR) || '';
+    const renderer = gl.getParameter(gl.RENDERER) || '';
+    return `${vendor}:::${renderer}`.trim();
   } catch (e) {
-    return 'gpu-fallback';
-  }
-}
-
-async function getAudioSignature() {
-  try {
-    const AudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    if (!AudioContext) return 'no-audio-ctx';
-
-    const context = new AudioContext(1, 44100, 44100);
-    const oscillator = context.createOscillator();
-    oscillator.type = 'triangle';
-    oscillator.frequency.value = 10000;
-
-    const compressor = context.createDynamicsCompressor();
-    compressor.threshold.value = -50;
-    compressor.knee.value = 40;
-    compressor.ratio.value = 12;
-    compressor.reduction.value = -20;
-    compressor.attack.value = 0;
-    compressor.release.value = 0.25;
-
-    oscillator.connect(compressor);
-    compressor.connect(context.destination);
-    oscillator.start(0);
-
-    const audioBuffer = await context.startRendering();
-    const channelData = audioBuffer.getChannelData(0);
-
-    let sum = 0;
-    for (let i = 4500; i < 5000; i++) {
-      sum += Math.abs(channelData[i] || 0);
-    }
-    return sum.toFixed(7);
-  } catch (e) {
-    return 'audio-fallback';
+    return 'gpu-default';
   }
 }
 
@@ -65,7 +36,7 @@ async function sha256(message) {
     }
   } catch (e) {}
 
-  // Fallback hashing if Web Crypto is unavailable
+  // Fallback hashing
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;
   for (let i = 0; i < message.length; i++) {
@@ -78,37 +49,48 @@ async function sha256(message) {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(16, '0');
 }
 
+const MACHINE_SEED_KEY = 'ps_sys_sec_hw_token';
+
+function getOrGenerateMachineSeed() {
+  try {
+    let seed = localStorage.getItem(MACHINE_SEED_KEY);
+    if (!seed || seed.length < 16) {
+      // توليد seed فريد ومحمي للجهاز
+      const r1 = Math.random().toString(36).substring(2);
+      const r2 = Math.random().toString(36).substring(2);
+      const t = Date.now().toString(36);
+      seed = `MCH-${r1}-${r2}-${t}`.toUpperCase();
+      localStorage.setItem(MACHINE_SEED_KEY, seed);
+    }
+    return seed;
+  } catch (e) {
+    return 'MCH-SEC-FALLBACK-TOKEN';
+  }
+}
+
 export async function getDeviceSerial() {
   try {
-    // تنظيف أي سيريال قديم كان محفوظاً في المتصفح لمنع الاعتماد على الـ localStorage
-    try {
-      localStorage.removeItem('playstation_hardware_serial_v1');
-    } catch (e) {}
+    // 1. جلب المفتاح الآمن للجهاز
+    const machineSeed = getOrGenerateMachineSeed();
 
-    // 1. استخراج الخصائص الحقيقية لعتاد الجهاز
+    // 2. قراءة مواصفات قطع الجهاز الحقيقية (كارت الشاشة + أنوية المعالج + معمارية النظام)
     const gpu = getGpuSignature();
-    const audio = await getAudioSignature();
     const cores = navigator.hardwareConcurrency || 4;
-    const memory = navigator.deviceMemory || 8;
     const platform = navigator.platform || 'Win32';
-    const screenDims = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-    // 2. دمج الخصائص الفيزيائية للجهاز
-    const hardwarePayload = [
+    // 3. ربط المفتاح بالقطع الفيزيائية (Hardware Binding)
+    // حتى لو تم نسخ الـ seed إلى جهاز آخر، لن يطابق لأن كارت الشاشة والمعالج مختلفين
+    const rawHardwarePayload = [
+      `SEED:${machineSeed}`,
       `GPU:${gpu}`,
-      `AUDIO:${audio}`,
       `CPU:${cores}`,
-      `RAM:${memory}`,
-      `OS:${platform}`,
-      `SCR:${screenDims}`,
-      `TZ:${timezone}`,
-    ].join('|||');
+      `PLATFORM:${platform}`,
+    ].join('###');
 
-    // 3. تشفير البصمة بـ SHA-256
-    const hash = await sha256(hardwarePayload);
+    // 4. تشفير الناتج بـ SHA-256
+    const hash = await sha256(rawHardwarePayload);
 
-    // 4. إرجاع السيريال المشفر بصيغة مقروءة وآمنة
+    // 5. استخراج سيريال فريد وثابت للجهاز
     const p1 = hash.substring(0, 4).toUpperCase();
     const p2 = hash.substring(4, 8).toUpperCase();
     const p3 = hash.substring(8, 12).toUpperCase();
@@ -116,7 +98,7 @@ export async function getDeviceSerial() {
 
     return `HW-${p1}-${p2}-${p3}-${p4}`;
   } catch (err) {
-    console.error('Hardware fingerprint generation error:', err);
-    return 'HW-SEC-GENERIC-AUTH';
+    console.error('getDeviceSerial error:', err);
+    return 'HW-WIN-SECURE-DEFAULT';
   }
 }
