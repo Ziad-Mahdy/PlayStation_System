@@ -296,20 +296,23 @@ export const subscriptionService = {
       const cleanPhone = (targetPhone || '').trim();
       const cleanCode = (targetCode || '').trim();
 
-      // حذف الأجهزة، الفئات، المنتجات، والفواتير المسجلة باسم وهاتف أو كود العميل
-      const conditions = [];
-      if (cleanCode) conditions.push(`client_code.eq.${cleanCode}`);
-      if (cleanPhone) conditions.push(`client_phone.eq.${cleanPhone}`);
-      if (cleanPhone) conditions.push(`client_code.eq.${cleanPhone}`);
-      if (cleanCode) conditions.push(`client_phone.eq.${cleanCode}`);
-
-      if (conditions.length > 0) {
-        const orFilter = conditions.join(',');
+      // 1. حذف كافة الأجهزة والفئات والمنتجات والفواتير المرتبطة بهذا الكود نهائياً
+      if (cleanCode) {
         await Promise.all([
-          supabase.from('devices').delete().or(orFilter),
-          supabase.from('categories').delete().or(orFilter),
-          supabase.from('products').delete().or(orFilter),
-          supabase.from('completed_sessions').delete().or(orFilter),
+          supabase.from('devices').delete().eq('client_code', cleanCode),
+          supabase.from('categories').delete().eq('client_code', cleanCode),
+          supabase.from('products').delete().eq('client_code', cleanCode),
+          supabase.from('completed_sessions').delete().eq('client_code', cleanCode),
+        ]);
+      }
+
+      // تنظيف أي سجلات قديمة مرتبطة برقم الهاتف
+      if (cleanPhone && cleanPhone !== cleanCode) {
+        await Promise.all([
+          supabase.from('devices').delete().eq('client_phone', cleanPhone),
+          supabase.from('categories').delete().eq('client_phone', cleanPhone),
+          supabase.from('products').delete().eq('client_phone', cleanPhone),
+          supabase.from('completed_sessions').delete().eq('client_phone', cleanPhone),
         ]);
       }
 
