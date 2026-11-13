@@ -1,40 +1,22 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const supabaseService = {
-  // ── Devices (معزولة لكل مشترك بـ الكود الخاص به لضمان بدء كل كود ببيانات نظيفة) ──
-  async fetchDevices(identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return [];
+  // ── Devices (معزولة بالكامل بـ client_code لكل مشترك) ──
+  async fetchDevices(clientCode) {
+    if (!isSupabaseConfigured || !clientCode) return [];
     try {
-      let query = supabase.from('devices').select('*');
-      // إذا كان المعرف هو كود اشتراك PS- نقوم بجلب أجهزة هذا الكود حصراً
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        query = query.eq('client_code', identifier);
-      } else {
-        const clientPhone = phone || identifier;
-        const orFilter = identifier === clientPhone
-          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
-        query = query.or(orFilter);
-      }
-
-      let { data, error } = await query.order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const res = await supabase
-          .from('devices')
-          .select('*')
-          .eq('client_phone', phone || identifier)
-          .order('id', { ascending: true });
-        data = res.data;
-        error = res.error;
-      }
+      const { data, error } = await supabase
+        .from('devices')
+        .select('*')
+        .eq('client_code', clientCode)
+        .order('id', { ascending: true });
 
       if (error) {
-        console.error('Error fetching client devices:', error);
+        console.error('Error fetching devices from Supabase:', error);
         return [];
       }
 
-      // فلترة وتوحيد الأجهزة لمنع تكرار أي جهاز بالاسم أو الـ ID
+      // توحيد الأجهزة بالاسم لتفادي أي تكرار
       const seenNames = new Set();
       const uniqueDevices = [];
       for (const d of (data || [])) {
@@ -50,11 +32,10 @@ export const supabaseService = {
             multiPrice: parseFloat(d.multi_price) || 0,
             status: d.status || 'free',
             session: d.session || null,
-            clientCode: d.client_code || identifier,
+            clientCode: d.client_code,
           });
         }
       }
-
       return uniqueDevices;
     } catch (err) {
       console.error('fetchDevices exception:', err);
@@ -62,61 +43,75 @@ export const supabaseService = {
     }
   },
 
-  async insertDevice(device, identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return null;
+  async insertDevice(device, clientCode, clientPhone = '') {
+    if (!isSupabaseConfigured || !clientCode) return null;
     try {
-      const clientPhone = phone || identifier;
-      const trimmedName = device.name.trim();
+      const trimmedName = (device.name || '').trim();
 
-      // فحص مسبق: إذا كان الجهاز مسجلاً بالفعل لهذا الكود نرجعه دون إدخال مكرر
-      let checkQuery = supabase.from('devices').select('*').eq('name', trimmedName);
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        checkQuery = checkQuery.eq('client_code', identifier);
-      } else {
-        checkQuery = checkQuery.or(`client_code.eq.${identifier},client_phone.eq.${clientPhone}`);
-      }
-
-      const { data: existing } = await checkQuery.limit(1);
+      // فحص مسبق: إذا كان الجهاز موجوداً بالفعل لنفس الكود نرجعه فوراً
+      const { data: existing } = await supabase
+        .from('devices')
+        .select('*')
+        .eq('client_code', clientCode)
+        .eq('name', trimmedName)
+        .limit(1);
 
       if (existing && existing.length > 0) {
-        return existing[0];
+        const d = existing[0];
+        return {
+          id: d.id,
+          name: d.name,
+          type: d.type,
+          isVIP: Boolean(d.is_vip),
+          singlePrice: parseFloat(d.single_price) || 0,
+          multiPrice: parseFloat(d.multi_price) || 0,
+          status: d.status || 'free',
+          session: d.session || null,
+          clientCode: d.client_code,
+        };
       }
 
       const payload = {
-        client_code: identifier,
-        client_phone: clientPhone,
+        client_code: clientCode,
+        client_phone: clientPhone || clientCode,
         name: trimmedName,
         type: device.type,
-        is_vip: device.isVIP,
-        single_price: device.singlePrice,
-        multi_price: device.multiPrice,
+        is_vip: Boolean(device.isVIP),
+        single_price: parseFloat(device.singlePrice) || 0,
+        multi_price: parseFloat(device.multiPrice) || 0,
         status: device.status || 'free',
         session: device.session || null,
       };
 
-      let res = await supabase
+      const { data, error } = await supabase
         .from('devices')
         .insert(payload)
         .select()
         .single();
 
-      if (res.error && res.error.code === '42703') {
-        delete payload.client_code;
-        res = await supabase.from('devices').insert(payload).select().single();
-      }
-
-      if (res.error) {
-        console.error('Error inserting device:', res.error);
+      if (error) {
+        console.error('Error inserting device:', error);
         return null;
       }
-      return res.data;
+
+      return {
+        id: data.id,
+        name: data.name,
+        type: data.type,
+        isVIP: Boolean(data.is_vip),
+        singlePrice: parseFloat(data.single_price) || 0,
+        multiPrice: parseFloat(data.multi_price) || 0,
+        status: data.status || 'free',
+        session: data.session || null,
+        clientCode: data.client_code,
+      };
     } catch (err) {
       console.error('insertDevice exception:', err);
       return null;
     }
   },
 
-  async updateDevice(id, updates) {
+  async updateDevice(id, updates, clientCode = null) {
     if (!isSupabaseConfigured || !id) return null;
     try {
       const payload = {};
@@ -128,13 +123,12 @@ export const supabaseService = {
       if (updates.status !== undefined) payload.status = updates.status;
       if (updates.session !== undefined) payload.session = updates.session;
 
-      const { data, error } = await supabase
-        .from('devices')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
+      let query = supabase.from('devices').update(payload).eq('id', id);
+      if (clientCode) {
+        query = query.eq('client_code', clientCode);
+      }
 
+      const { data, error } = await query.select().single();
       if (error) {
         console.error('Error updating device:', error);
         return null;
@@ -146,52 +140,34 @@ export const supabaseService = {
     }
   },
 
-  async deleteDevice(id, name = null, identifier = null, phone = null) {
-    if (!isSupabaseConfigured) return;
+  async deleteDevice(id, clientCode = null) {
+    if (!isSupabaseConfigured || !id) return false;
     try {
-      const clientPhone = phone || identifier;
-      if (id) {
-        await supabase.from('devices').delete().eq('id', id);
+      let query = supabase.from('devices').delete().eq('id', id);
+      if (clientCode) {
+        query = query.eq('client_code', clientCode);
       }
-      if (name && identifier) {
-        const trimmed = name.trim();
-        await supabase
-          .from('devices')
-          .delete()
-          .ilike('name', trimmed)
-          .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
+      const { error } = await query;
+      if (error) {
+        console.error('Error deleting device:', error);
+        return false;
       }
+      return true;
     } catch (err) {
       console.error('deleteDevice exception:', err);
+      return false;
     }
   },
 
   // ── Categories (معزولة لكل كود اشتراك) ──
-  async fetchCategories(identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return [];
+  async fetchCategories(clientCode) {
+    if (!isSupabaseConfigured || !clientCode) return [];
     try {
-      let query = supabase.from('categories').select('name');
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        query = query.eq('client_code', identifier);
-      } else {
-        const clientPhone = phone || identifier;
-        const orFilter = identifier === clientPhone
-          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
-        query = query.or(orFilter);
-      }
-
-      let { data, error } = await query.order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const res = await supabase
-          .from('categories')
-          .select('name')
-          .eq('client_phone', phone || identifier)
-          .order('id', { ascending: true });
-        data = res.data;
-        error = res.error;
-      }
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('client_code', clientCode)
+        .order('id', { ascending: true });
 
       if (error || !data) return [];
       return data.map((c) => c.name);
@@ -200,69 +176,58 @@ export const supabaseService = {
     }
   },
 
-  async addCategory(name, identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return;
+  async addCategory(name, clientCode, clientPhone = '') {
+    if (!isSupabaseConfigured || !clientCode || !name?.trim()) return;
     try {
-      let res = await supabase
+      const trimmed = name.trim();
+      const { data: existing } = await supabase
         .from('categories')
-        .insert({ name: name.trim(), client_code: identifier, client_phone: phone || identifier });
+        .select('id')
+        .eq('client_code', clientCode)
+        .eq('name', trimmed)
+        .limit(1);
 
-      if (res.error && res.error.code === '42703') {
-        await supabase
-          .from('categories')
-          .insert({ name: name.trim(), client_phone: phone || identifier });
-      }
+      if (existing && existing.length > 0) return;
+
+      await supabase.from('categories').insert({
+        name: trimmed,
+        client_code: clientCode,
+        client_phone: clientPhone || clientCode,
+      });
     } catch (err) {
       console.error('addCategory exception:', err);
     }
   },
 
-  async deleteCategory(name, identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return;
+  async deleteCategory(name, clientCode) {
+    if (!isSupabaseConfigured || !clientCode || !name) return;
     try {
-      let query = supabase.from('categories').delete().eq('name', name);
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        query = query.eq('client_code', identifier);
-      } else {
-        const clientPhone = phone || identifier;
-        query = query.or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
-      }
-      await query;
+      await supabase
+        .from('categories')
+        .delete()
+        .eq('client_code', clientCode)
+        .eq('name', name.trim());
     } catch (err) {
       console.error('deleteCategory exception:', err);
     }
   },
 
-  // ── Products (معزولة لكل كود اشتراك لضمان بداية نظيفة لكل كود) ──
-  async fetchProducts(identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return [];
+  // ── Products (معزولة لكل كود اشتراك) ──
+  async fetchProducts(clientCode) {
+    if (!isSupabaseConfigured || !clientCode) return [];
     try {
-      let query = supabase.from('products').select('*');
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        query = query.eq('client_code', identifier);
-      } else {
-        const clientPhone = phone || identifier;
-        const orFilter = identifier === clientPhone
-          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
-        query = query.or(orFilter);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('client_code', clientCode)
+        .order('id', { ascending: true });
+
+      if (error || !data) {
+        console.error('Error fetching products from Supabase:', error);
+        return [];
       }
 
-      let { data, error } = await query.order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const res = await supabase
-          .from('products')
-          .select('*')
-          .eq('client_phone', phone || identifier)
-          .order('id', { ascending: true });
-        data = res.data;
-        error = res.error;
-      }
-
-      if (error || !data) return [];
-
-      // فلترة وتوحيد المنتجات لمنع تكرار أي منتج بالاسم
+      // توحيد المنتجات بالاسم لمنع تكرار أي منتج
       const seenNames = new Set();
       const uniqueProducts = [];
       for (const p of data) {
@@ -274,130 +239,136 @@ export const supabaseService = {
             name: p.name,
             price: parseFloat(p.price) || 0,
             category: p.category || 'مشروبات',
-            clientCode: p.client_code || identifier,
+            clientCode: p.client_code,
           });
         }
       }
-
       return uniqueProducts;
     } catch (err) {
+      console.error('fetchProducts exception:', err);
       return [];
     }
   },
 
-  async insertProduct(product, identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return null;
+  async insertProduct(product, clientCode, clientPhone = '') {
+    if (!isSupabaseConfigured || !clientCode) return null;
     try {
-      const clientPhone = phone || identifier;
-      const trimmedName = product.name.trim();
+      const trimmedName = (product.name || '').trim();
 
-      // فحص مسبق: إذا كان المنتج مسجلاً بالفعل لهذا الكود نرجعه دون إدخال مكرر
-      let checkQuery = supabase.from('products').select('*').eq('name', trimmedName);
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        checkQuery = checkQuery.eq('client_code', identifier);
-      } else {
-        checkQuery = checkQuery.or(`client_code.eq.${identifier},client_phone.eq.${clientPhone}`);
-      }
-
-      const { data: existing } = await checkQuery.limit(1);
+      // فحص مسبق: إذا كان المنتج مسجلاً لهذا الكود
+      const { data: existing } = await supabase
+        .from('products')
+        .select('*')
+        .eq('client_code', clientCode)
+        .eq('name', trimmedName)
+        .limit(1);
 
       if (existing && existing.length > 0) {
-        return existing[0];
+        const p = existing[0];
+        return {
+          id: p.id,
+          name: p.name,
+          price: parseFloat(p.price) || 0,
+          category: p.category || 'مشروبات',
+          clientCode: p.client_code,
+        };
       }
 
       const payload = {
-        client_code: identifier,
-        client_phone: clientPhone,
+        client_code: clientCode,
+        client_phone: clientPhone || clientCode,
         name: trimmedName,
-        price: product.price,
+        price: parseFloat(product.price) || 0,
         category: product.category || 'مشروبات',
       };
 
-      let res = await supabase
+      const { data, error } = await supabase
         .from('products')
         .insert(payload)
         .select()
         .single();
 
-      if (res.error && res.error.code === '42703') {
-        delete payload.client_code;
-        res = await supabase.from('products').insert(payload).select().single();
-      }
-
-      if (res.error) {
-        console.error('Error inserting product:', res.error);
+      if (error) {
+        console.error('Error inserting product:', error);
         return null;
       }
-      return res.data;
+
+      return {
+        id: data.id,
+        name: data.name,
+        price: parseFloat(data.price) || 0,
+        category: data.category || 'مشروبات',
+        clientCode: data.client_code,
+      };
     } catch (err) {
       console.error('insertProduct exception:', err);
       return null;
     }
   },
 
-  async updateProduct(id, updates) {
-    if (!isSupabaseConfigured || !id) return;
+  async updateProduct(id, updates, clientCode = null) {
+    if (!isSupabaseConfigured || !id) return null;
     try {
       const payload = {};
       if (updates.name !== undefined) payload.name = updates.name.trim();
-      if (updates.price !== undefined) payload.price = updates.price;
+      if (updates.price !== undefined) payload.price = parseFloat(updates.price) || 0;
       if (updates.category !== undefined) payload.category = updates.category;
 
-      const { error } = await supabase.from('products').update(payload).eq('id', id);
+      let query = supabase.from('products').update(payload).eq('id', id);
+      if (clientCode) query = query.eq('client_code', clientCode);
+
+      const { data, error } = await query.select().single();
       if (error) console.error('Error updating product:', error);
+      return data;
     } catch (err) {
       console.error('updateProduct exception:', err);
+      return null;
     }
   },
 
-  async deleteProduct(id, name = null, identifier = null, phone = null) {
-    if (!isSupabaseConfigured) return;
+  async deleteProduct(id, name = null, clientCode = null) {
+    if (!isSupabaseConfigured || (!id && !name)) return false;
     try {
-      const clientPhone = phone || identifier;
-      if (id) {
-        await supabase.from('products').delete().eq('id', id);
+      // 1. حذف مباشر بمعرف السجل id (إذا كان موجوداً كرقم حقيقي)
+      if (id && typeof id === 'number') {
+        let q = supabase.from('products').delete().eq('id', id);
+        if (clientCode) q = q.eq('client_code', clientCode);
+        const { error } = await q;
+        if (!error) return true;
       }
-      if (name && identifier) {
-        const trimmed = name.trim();
-        await supabase
+
+      // 2. كإجراء أمان: حذف بالاسم وكود العميل
+      if (name && clientCode) {
+        const { error } = await supabase
           .from('products')
           .delete()
-          .ilike('name', trimmed)
-          .or(`client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`);
+          .eq('client_code', clientCode)
+          .eq('name', name.trim());
+        if (!error) return true;
       }
+
+      return true;
     } catch (err) {
       console.error('deleteProduct exception:', err);
+      return false;
     }
   },
 
   // ── Completed Sessions / Invoices (معزولة لكل كود اشتراك) ──
-  async fetchCompletedSessions(identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return [];
+  async fetchCompletedSessions(clientCode) {
+    if (!isSupabaseConfigured || !clientCode) return [];
     try {
-      let query = supabase.from('completed_sessions').select('*');
-      if (typeof identifier === 'string' && identifier.startsWith('PS-')) {
-        query = query.eq('client_code', identifier);
-      } else {
-        const clientPhone = phone || identifier;
-        const orFilter = identifier === clientPhone
-          ? `client_code.eq.${identifier},client_phone.eq.${identifier}`
-          : `client_code.eq.${identifier},client_phone.eq.${clientPhone},client_code.eq.${clientPhone},client_phone.eq.${identifier}`;
-        query = query.or(orFilter);
+      const { data, error } = await supabase
+        .from('completed_sessions')
+        .select('*')
+        .eq('client_code', clientCode)
+        .order('id', { ascending: false });
+
+      if (error || !data) {
+        console.error('Error fetching completed sessions:', error);
+        return [];
       }
 
-      let { data, error } = await query.order('id', { ascending: true });
-
-      if (error && error.code === '42703') {
-        const res = await supabase
-          .from('completed_sessions')
-          .select('*')
-          .eq('client_phone', phone || identifier)
-          .order('id', { ascending: true });
-        data = res.data;
-        error = res.error;
-      }
-
-      if (error || !data) return [];
       return data.map((s) => ({
         id: s.id,
         deviceName: s.device_name,
@@ -413,63 +384,62 @@ export const supabaseService = {
         timeCost: parseFloat(s.time_cost) || 0,
         ordersCost: parseFloat(s.orders_cost) || 0,
         total: parseFloat(s.total) || 0,
-        clientCode: s.client_code || identifier,
+        clientCode: s.client_code,
       }));
     } catch (err) {
+      console.error('fetchCompletedSessions exception:', err);
       return [];
     }
   },
 
-  async addCompletedSession(session, identifier, phone = null) {
-    if (!isSupabaseConfigured || !identifier) return null;
+  async addCompletedSession(session, clientCode, clientPhone = '') {
+    if (!isSupabaseConfigured || !clientCode) return null;
     try {
       const payload = {
-        client_code: identifier,
-        client_phone: phone || identifier,
+        client_code: clientCode,
+        client_phone: clientPhone || clientCode,
         device_name: session.deviceName,
         device_type: session.deviceType,
-        is_vip: session.isVIP,
+        is_vip: Boolean(session.isVIP),
         customer_name: session.customerName || '',
-        start_time: session.startTime,
-        end_time: session.endTime,
+        start_time: Number(session.startTime),
+        end_time: Number(session.endTime),
         duration_seconds: session.durationSeconds,
         mode: session.mode,
         time_type: session.timeType || 'open',
         target_minutes: session.targetMinutes || null,
-        time_cost: session.timeCost,
-        orders_cost: session.ordersCost,
-        total: session.total,
+        time_cost: parseFloat(session.timeCost) || 0,
+        orders_cost: parseFloat(session.ordersCost) || 0,
+        total: parseFloat(session.total) || 0,
       };
 
-      let res = await supabase
+      const { data, error } = await supabase
         .from('completed_sessions')
         .insert(payload)
         .select()
         .single();
 
-      if (res.error && res.error.code === '42703') {
-        delete payload.client_code;
-        res = await supabase.from('completed_sessions').insert(payload).select().single();
+      if (error) {
+        console.error('Error inserting completed session in Supabase:', error);
+        return null;
       }
-
-      if (res.error) console.error('Error adding completed session to Supabase:', res.error);
-      return res.data;
+      return data;
     } catch (err) {
       console.error('addCompletedSession exception:', err);
       return null;
     }
   },
 
-  // ── حذف فاتورة فردية نهائياً ──
-  async deleteCompletedSession(id) {
+  async deleteCompletedSession(id, clientCode = null) {
     if (!isSupabaseConfigured || !id) return false;
     try {
-      const { error } = await supabase
-        .from('completed_sessions')
-        .delete()
-        .eq('id', id);
+      let query = supabase.from('completed_sessions').delete().eq('id', id);
+      if (clientCode) {
+        query = query.eq('client_code', clientCode);
+      }
+      const { error } = await query;
       if (error) {
-        console.error('Error deleting completed session:', error);
+        console.error('Error deleting completed session from Supabase:', error);
         return false;
       }
       return true;
@@ -479,20 +449,13 @@ export const supabaseService = {
     }
   },
 
-  // ── مسح وتصفير فواتير المشترك (اليوم فقط أو بالكامل مع الحفاظ على سجل الشهر) ──
-  async clearCompletedSessions(identifier, phone = null, onlyToday = true) {
-    if (!isSupabaseConfigured || !identifier) return false;
+  async clearCompletedSessions(clientCode, onlyToday = true) {
+    if (!isSupabaseConfigured || !clientCode) return false;
     try {
-      const conditions = [];
-      if (identifier) conditions.push(`client_code.eq.${identifier}`);
-      if (phone) conditions.push(`client_phone.eq.${phone}`);
-      if (phone) conditions.push(`client_code.eq.${phone}`);
-      if (identifier) conditions.push(`client_phone.eq.${identifier}`);
-
       let query = supabase
         .from('completed_sessions')
         .delete()
-        .or(conditions.join(','));
+        .eq('client_code', clientCode);
 
       if (onlyToday) {
         const now = new Date();
@@ -509,30 +472,30 @@ export const supabaseService = {
     }
   },
 
-  // ── Realtime Listener ──
-  subscribeToChanges(onChange) {
-    if (!isSupabaseConfigured || !supabase) return () => {};
+  // ── Realtime Listener (مع حصر القناة للعميل) ──
+  subscribeToChanges(clientCode, onChange) {
+    if (!isSupabaseConfigured || !supabase || !clientCode) return () => {};
     try {
       const channel = supabase
-        .channel('cafe-realtime-sync')
+        .channel(`cafe-realtime-${clientCode}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'devices' },
+          { event: '*', schema: 'public', table: 'devices', filter: `client_code=eq.${clientCode}` },
           (p) => onChange?.('devices', p)
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'categories' },
+          { event: '*', schema: 'public', table: 'categories', filter: `client_code=eq.${clientCode}` },
           (p) => onChange?.('categories', p)
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'products' },
+          { event: '*', schema: 'public', table: 'products', filter: `client_code=eq.${clientCode}` },
           (p) => onChange?.('products', p)
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'completed_sessions' },
+          { event: '*', schema: 'public', table: 'completed_sessions', filter: `client_code=eq.${clientCode}` },
           (p) => onChange?.('completed_sessions', p)
         )
         .subscribe();

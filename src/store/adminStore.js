@@ -2,75 +2,48 @@ import { create } from 'zustand';
 import { supabaseService } from '../services/supabaseService';
 import useSubscriptionStore from './subscriptionStore';
 
-const getClientSession = () => {
+const getClient = () => {
   try {
     const raw = localStorage.getItem('playstation_client_session');
-    if (raw) {
-      return JSON.parse(raw);
-    }
+    if (raw) return JSON.parse(raw);
   } catch (e) {}
   return useSubscriptionStore.getState().currentClient;
 };
 
-const getClientIdentifier = () => {
-  const client = getClientSession();
-  return client?.code || client?.phone || null;
-};
-
-const getCachedProducts = () => {
-  const id = getClientIdentifier();
-  if (!id) return [];
-  try {
-    const raw = localStorage.getItem(`ps_products_cache_${id}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-};
-
-const saveProductsCache = (products) => {
-  const id = getClientIdentifier();
-  if (id && products) {
-    try {
-      localStorage.setItem(`ps_products_cache_${id}`, JSON.stringify(products));
-    } catch (e) {}
-  }
-};
-
 const useAdminStore = create((set, get) => ({
-  products: getCachedProducts(), // استرجاع فوري من الكاش عند الـ Refresh لمنع اختفاء المشروبات
+  products: [],
   nextProductId: 1,
   isLoading: false,
   isSynced: false,
   isSavingProduct: false,
 
-  // ── جلب منتجات الكلاينت فقط من Supabase مع توحيد وحذف أي تكرار ──
+  // ── تفريغ المخزن تماماً (عند تغيير الكود أو تسجيل الخروج) ──
+  resetStore: () => {
+    set({
+      products: [],
+      nextProductId: 1,
+      isLoading: false,
+      isSynced: false,
+      isSavingProduct: false,
+    });
+  },
+
+  // ── جلب المنتجات مباشرة من قاعدة البيانات Supabase ──
   initSync: async () => {
-    const client = getClientSession();
-    const identifier = client?.code || client?.phone;
-    if (!identifier) {
-      set({ products: [], isLoading: false });
+    const client = getClient();
+    const clientCode = client?.code;
+    if (!clientCode) {
+      set({ products: [], isLoading: false, isSynced: true });
       return;
     }
 
+    set({ isLoading: true });
     try {
-      const dbProducts = await supabaseService.fetchProducts(identifier, client?.phone);
+      const dbProducts = await supabaseService.fetchProducts(clientCode);
+      const maxId = (dbProducts || []).reduce((max, p) => Math.max(max, Number(p.id) || 0), 0);
 
-      // توحيد المنتجات بالاسم لضمان عدم وجود أي تكرار نهائياً
-      const seenNames = new Set();
-      const finalProducts = [];
-      for (const p of (dbProducts || [])) {
-        const normName = (p.name || '').trim().toLowerCase();
-        if (normName && !seenNames.has(normName)) {
-          seenNames.add(normName);
-          finalProducts.push(p);
-        }
-      }
-
-      saveProductsCache(finalProducts);
-      const maxId = finalProducts.reduce((max, p) => Math.max(max, p.id || 0), 0);
       set({
-        products: finalProducts,
+        products: dbProducts || [],
         nextProductId: maxId + 1,
         isLoading: false,
         isSynced: true,
@@ -81,17 +54,18 @@ const useAdminStore = create((set, get) => ({
     }
   },
 
-  // ── إضافة منتج جديد للبوفيه مع قفل متزامن لمنع الإضافة المزدوجة ──
+  // ── إضافة منتج جديد للبوفيه مباشرة في قاعدة البيانات ──
   addProduct: async (product) => {
     if (get().isSavingProduct) return false;
     set({ isSavingProduct: true });
 
     try {
-      const client = getClientSession();
-      const identifier = client?.code || client?.phone;
+      const client = getClient();
+      const clientCode = client?.code;
       const nameTrimmed = (product.name || '').trim();
       const normName = nameTrimmed.toLowerCase();
 
+      // فحص عدم التكرار بالاسم في الحالة الحالية
       const exists = get().products.some(
         (p) => p.name.trim().toLowerCase() === normName
       );
@@ -103,79 +77,64 @@ const useAdminStore = create((set, get) => ({
         category: product.category || 'مشروبات',
       };
 
-      if (identifier) {
-        const created = await supabaseService.insertProduct(payload, identifier, client?.phone);
+      if (clientCode) {
+        const created = await supabaseService.insertProduct(payload, clientCode, client?.phone);
         if (created && created.id) {
-          const newProd = {
-            id: created.id,
-            name: created.name,
-            price: parseFloat(created.price) || payload.price,
-            category: created.category || payload.category,
-          };
           const updated = [
-            ...get().products.filter(
-              (p) =>
-                p.id !== created.id &&
-                p.name.trim().toLowerCase() !== normName
-            ),
-            newProd,
+            ...get().products.filter((p) => p.name.trim().toLowerCase() !== normName),
+            created,
           ];
           set({
             products: updated,
-            nextProductId: Math.max(get().nextProductId, created.id + 1),
+            nextProductId: Math.max(get().nextProductId, Number(created.id) + 1),
           });
-          saveProductsCache(updated);
           return true;
         }
       }
 
-      const tempId = Date.now();
-      const fallbackProd = { ...payload, id: tempId };
-      const updated = [
-        ...get().products.filter(
-          (p) => p.name.trim().toLowerCase() !== normName
-        ),
-        fallbackProd,
-      ];
-      set({
-        products: updated,
-        nextProductId: get().nextProductId + 1,
-      });
-      saveProductsCache(updated);
+      // في حالة عدم الاتصال (Fallback محلي)
+      const fallbackProd = { ...payload, id: Date.now() };
+      set((state) => ({
+        products: [...state.products, fallbackProd],
+      }));
       return true;
     } finally {
       set({ isSavingProduct: false });
     }
   },
 
-  // ── تعديل منتج ──
+  // ── تعديل منتج في قاعدة البيانات ──
   updateProduct: async (id, updates) => {
+    const client = getClient();
+    const clientCode = client?.code;
+
     if (updates.name) {
       const nameTrimmed = updates.name.trim();
       const normName = nameTrimmed.toLowerCase();
       const exists = get().products.some(
-        (p) => p.id !== id && p.name.trim().toLowerCase() === normName
+        (p) => (p.id !== id && String(p.id) !== String(id)) && p.name.trim().toLowerCase() === normName
       );
       if (exists) return false;
       updates.name = nameTrimmed;
     }
 
     const updated = get().products.map((p) =>
-      p.id === id ? { ...p, ...updates } : p
+      p.id === id || String(p.id) === String(id) ? { ...p, ...updates } : p
     );
     set({ products: updated });
-    saveProductsCache(updated);
 
-    await supabaseService.updateProduct(id, updates);
+    if (typeof id === 'number' || !isNaN(Number(id))) {
+      await supabaseService.updateProduct(Number(id), updates, clientCode);
+    }
     return true;
   },
 
-  // ── حذف منتج نهائياً من الـ state وقاعدة البيانات والكاش ──
+  // ── حذف منتج نهائياً من قاعدة البيانات والحالة ──
   deleteProduct: async (id, name = null) => {
-    const client = getClientSession();
-    const identifier = client?.code || client?.phone;
+    const client = getClient();
+    const clientCode = client?.code;
 
-    // 1. تحديد المنتج المستهدف بدقة بالـ id أو الاسم
+    // 1. تحديد السجل المستهدف
     const target = get().products.find(
       (p) =>
         p.id === id ||
@@ -184,21 +143,24 @@ const useAdminStore = create((set, get) => ({
     );
     const targetId = target?.id || id;
     const targetName = target?.name || name;
-    const normTargetName = (targetName || '').trim().toLowerCase();
+    const normName = (targetName || '').trim().toLowerCase();
 
-    // 2. حذفه من الـ state والكاش المحلي فوراً لمنع عودته
+    // 2. حذفه من الـ state فوراً
     const updated = get().products.filter(
       (p) =>
         p.id !== targetId &&
         String(p.id) !== String(targetId) &&
-        (!normTargetName || p.name.trim().toLowerCase() !== normTargetName)
+        (!normName || p.name.trim().toLowerCase() !== normName)
     );
     set({ products: updated });
-    saveProductsCache(updated);
 
     // 3. حذفه نهائياً من قاعدة بيانات Supabase
-    if (identifier) {
-      await supabaseService.deleteProduct(targetId, targetName, identifier, client?.phone);
+    if (clientCode) {
+      await supabaseService.deleteProduct(
+        typeof targetId === 'number' ? targetId : null,
+        targetName,
+        clientCode
+      );
     }
   },
 }));

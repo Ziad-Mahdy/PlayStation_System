@@ -52,8 +52,8 @@ export default function App() {
     let devicesDebounceTimer = null;
     let productsDebounceTimer = null;
 
-    // Realtime changes for devices & products (مع Debounce لمنع السباق والتحديثات المتكررة)
-    const unsubscribeSync = supabaseService.subscribeToChanges((table) => {
+    // Realtime changes for devices & products (معزول لكود المشترك الحالي حصراً)
+    const unsubscribeSync = supabaseService.subscribeToChanges(currentClient?.code, (table) => {
       if (['devices', 'categories', 'completed_sessions'].includes(table)) {
         if (devicesDebounceTimer) clearTimeout(devicesDebounceTimer);
         devicesDebounceTimer = setTimeout(() => {
@@ -88,7 +88,7 @@ export default function App() {
       unsubscribeSub();
       clearInterval(timer);
     };
-  }, [checkAndUpdateCurrentClient]);
+  }, [checkAndUpdateCurrentClient, currentClient?.code]);
 
   return (
     <Routes>

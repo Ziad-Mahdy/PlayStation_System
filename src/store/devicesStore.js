@@ -12,70 +12,11 @@ const getClientSession = () => {
   return useSubscriptionStore.getState().currentClient;
 };
 
-const getClientIdentifier = () => {
-  const client = getClientSession();
-  return client?.code || client?.phone || null;
-};
-
-const getCachedDevices = () => {
-  const id = getClientIdentifier();
-  if (!id) return [];
-  try {
-    const raw = localStorage.getItem(`ps_devices_cache_${id}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-};
-
-const saveDevicesCache = (devices) => {
-  const id = getClientIdentifier();
-  if (id && devices) {
-    try {
-      localStorage.setItem(`ps_devices_cache_${id}`, JSON.stringify(devices));
-    } catch (e) {}
-  }
-};
-
 const DEFAULT_CATEGORIES = ['PS4', 'PS5', 'VIP'];
 
-const getCachedCategories = () => {
-  const id = getClientIdentifier();
-  if (!id) return DEFAULT_CATEGORIES;
-  try {
-    const raw = localStorage.getItem(`ps_categories_cache_${id}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {}
-  return DEFAULT_CATEGORIES;
-};
-
-const saveCategoriesCache = (categories) => {
-  const id = getClientIdentifier();
-  if (id && categories) {
-    try {
-      localStorage.setItem(`ps_categories_cache_${id}`, JSON.stringify(categories));
-    } catch (e) {}
-  }
-};
-
-const isCategoriesInitialized = (id) => {
-  if (!id) return false;
-  return localStorage.getItem(`ps_cat_init_${id}`) === 'true';
-};
-
-const markCategoriesInitialized = (id) => {
-  if (!id) return;
-  try {
-    localStorage.setItem(`ps_cat_init_${id}`, 'true');
-  } catch (e) {}
-};
-
 const useDevicesStore = create((set, get) => ({
-  categories: getCachedCategories(),
-  devices: getCachedDevices(), // استرجاع فوري من الكاش عند الـ Refresh لضمان عدم اختفاء الأجهزة أبداً
+  categories: [],
+  devices: [],
   completedSessions: [],
   nextSessionId: 1,
   nextOrderId: 1000,
@@ -83,57 +24,59 @@ const useDevicesStore = create((set, get) => ({
   isSynced: false,
   isSavingDevice: false,
 
-  // ── جلب داتا الكلاينت فقط من Supabase مع دمج الكاش وحماية الجلسات النشطة وتوحيد الأجهزة ──
+  // ── تفريغ المخزن بالكامل (عند تسجيل الخروج أو تبديل الكود) ──
+  resetStore: () => {
+    set({
+      categories: [],
+      devices: [],
+      completedSessions: [],
+      nextSessionId: 1,
+      nextOrderId: 1000,
+      isLoading: false,
+      isSynced: false,
+      isSavingDevice: false,
+    });
+  },
+
+  // ── جلب داتا الكلاينت مباشرة وحصرياً من Supabase بناءً على كود الاشتراك ──
   initSync: async () => {
     const client = getClientSession();
-    const identifier = client?.code || client?.phone;
-    if (!identifier) {
+    const clientCode = client?.code;
+    if (!clientCode) {
+      set({
+        devices: [],
+        categories: [],
+        completedSessions: [],
+        isLoading: false,
+        isSynced: true,
+      });
       return;
     }
 
+    set({ isLoading: true });
     try {
       const [dbDevices, dbCategories, dbSessions] = await Promise.all([
-        supabaseService.fetchDevices(identifier, client?.phone),
-        supabaseService.fetchCategories(identifier, client?.phone),
-        supabaseService.fetchCompletedSessions(identifier, client?.phone),
+        supabaseService.fetchDevices(clientCode),
+        supabaseService.fetchCategories(clientCode),
+        supabaseService.fetchCompletedSessions(clientCode),
       ]);
 
-      const maxSessionId = (dbSessions || []).reduce((max, s) => Math.max(max, s.id || 0), 0);
-
-      const isInitialized = isCategoriesInitialized(identifier);
-      let finalCategories = [];
-
-      if (dbCategories && dbCategories.length > 0) {
-        finalCategories = dbCategories;
-        markCategoriesInitialized(identifier);
-      } else if (isInitialized) {
-        finalCategories = getCachedCategories();
-      } else {
-        // أول دخول للكلاينت: نضع الفئات الافتراضية [PS4, PS5, VIP] ونحفظها في السيرفر والكاش
+      let finalCategories = dbCategories || [];
+      // إذا كان كود جديد تماماً بدون فئات، نقوم بتهيئة الفئات الافتراضية في قاعدة البيانات
+      if (finalCategories.length === 0) {
         finalCategories = DEFAULT_CATEGORIES;
-        markCategoriesInitialized(identifier);
-        if (identifier) {
-          for (const cat of DEFAULT_CATEGORIES) {
-            supabaseService.addCategory(cat, identifier, client?.phone);
-          }
-        }
-      }
-      saveCategoriesCache(finalCategories);
-
-      // توحيد الأجهزة بالاسم لضمان عدم وجود تكرار نهائياً
-      const seenDevNames = new Set();
-      const mergedDevices = [];
-      for (const d of (dbDevices || [])) {
-        const normName = (d.name || '').trim().toLowerCase();
-        if (normName && !seenDevNames.has(normName)) {
-          seenDevNames.add(normName);
-          mergedDevices.push(d);
+        for (const cat of DEFAULT_CATEGORIES) {
+          await supabaseService.addCategory(cat, clientCode, client?.phone);
         }
       }
 
-      saveDevicesCache(mergedDevices);
+      const maxSessionId = (dbSessions || []).reduce(
+        (max, s) => Math.max(max, Number(s.id) || 0),
+        0
+      );
+
       set({
-        devices: mergedDevices,
+        devices: dbDevices || [],
         categories: finalCategories,
         completedSessions: dbSessions || [],
         nextSessionId: maxSessionId + 1,
@@ -148,42 +91,40 @@ const useDevicesStore = create((set, get) => ({
 
   // ── إدارة فئات الصالة ──
   addCategory: async (catName) => {
-    const trimmed = catName.trim();
+    const trimmed = (catName || '').trim();
     if (!trimmed) return false;
     if (get().categories.includes(trimmed)) return false;
 
     const client = getClientSession();
-    const identifier = client?.code || client?.phone;
-    markCategoriesInitialized(identifier);
+    const clientCode = client?.code;
     const newCategories = [...get().categories, trimmed];
     set({ categories: newCategories });
-    saveCategoriesCache(newCategories);
-    if (identifier) {
-      await supabaseService.addCategory(trimmed, identifier, client?.phone);
+
+    if (clientCode) {
+      await supabaseService.addCategory(trimmed, clientCode, client?.phone);
     }
     return true;
   },
 
   deleteCategory: async (catName) => {
     const client = getClientSession();
-    const identifier = client?.code || client?.phone;
-    markCategoriesInitialized(identifier);
+    const clientCode = client?.code;
     const newCategories = get().categories.filter((c) => c !== catName);
     set({ categories: newCategories });
-    saveCategoriesCache(newCategories);
-    if (identifier) {
-      await supabaseService.deleteCategory(catName, identifier, client?.phone);
+
+    if (clientCode) {
+      await supabaseService.deleteCategory(catName, clientCode);
     }
   },
 
-  // ── إضافة جهاز جديد للكلاينت مع قفل متزامن لمنع الإضافة المزدوجة ──
+  // ── إضافة جهاز جديد للكلاينت في Supabase ──
   addDevice: async (deviceData) => {
     if (get().isSavingDevice) return false;
     set({ isSavingDevice: true });
 
     try {
       const client = getClientSession();
-      const identifier = client?.code || client?.phone;
+      const clientCode = client?.code;
       const nameTrimmed = (deviceData.name || '').trim();
       const normName = nameTrimmed.toLowerCase();
 
@@ -193,7 +134,7 @@ const useDevicesStore = create((set, get) => ({
       if (exists) return false;
 
       const payload = {
-        name: nameTrimmed || `جهاز جديد`,
+        name: nameTrimmed || 'جهاز جديد',
         type: deviceData.type || 'PlayStation 5',
         isVIP: Boolean(deviceData.isVIP),
         singlePrice: parseFloat(deviceData.singlePrice) || 45,
@@ -202,85 +143,51 @@ const useDevicesStore = create((set, get) => ({
         session: null,
       };
 
-      if (identifier) {
-        const created = await supabaseService.insertDevice(payload, identifier, client?.phone);
+      if (clientCode) {
+        const created = await supabaseService.insertDevice(payload, clientCode, client?.phone);
         if (created && created.id) {
-          const newDevice = {
-            id: created.id,
-            name: created.name,
-            type: created.type,
-            isVIP: Boolean(created.is_vip ?? deviceData.isVIP),
-            singlePrice: parseFloat(created.single_price ?? deviceData.singlePrice) || 45,
-            multiPrice: parseFloat(created.multi_price ?? deviceData.multiPrice) || 35,
-            status: created.status || 'free',
-            session: created.session || null,
-          };
           const updatedDevices = [
-            ...get().devices.filter(
-              (d) =>
-                d.id !== created.id &&
-                d.name.trim().toLowerCase() !== normName
-            ),
-            newDevice,
+            ...get().devices.filter((d) => d.name.trim().toLowerCase() !== normName),
+            created,
           ];
           set({ devices: updatedDevices });
-          saveDevicesCache(updatedDevices);
           return true;
         }
       }
 
-      const tempId = Date.now();
-      const fallbackDevice = { id: tempId, ...payload };
-      const updatedDevices = [
-        ...get().devices.filter(
-          (d) => d.name.trim().toLowerCase() !== normName
-        ),
-        fallbackDevice,
-      ];
-      set({ devices: updatedDevices });
-      saveDevicesCache(updatedDevices);
+      const fallbackDevice = { id: Date.now(), ...payload };
+      set((state) => ({
+        devices: [...state.devices, fallbackDevice],
+      }));
       return true;
     } finally {
       set({ isSavingDevice: false });
     }
   },
 
-  // ── حذف جهاز نهائياً من الـ state وقاعدة البيانات والكاش ──
-  deleteDevice: async (deviceId, deviceName = null) => {
+  // ── حذف جهاز نهائياً من الـ state وقاعدة البيانات ──
+  deleteDevice: async (deviceId) => {
     const client = getClientSession();
-    const identifier = client?.code || client?.phone;
+    const clientCode = client?.code;
 
-    // 1. تحديد الجهاز المستهدف
-    const target = get().devices.find(
-      (d) =>
-        d.id === deviceId ||
-        (deviceName && d.name.trim().toLowerCase() === deviceName.trim().toLowerCase())
-    );
-    const targetId = target?.id || deviceId;
-    const targetName = target?.name || deviceName;
-    const normTargetName = (targetName || '').trim().toLowerCase();
-
-    // 2. حذفه من الـ state والكاش المحلي فوراً لمنع ظهوره
     const updatedDevices = get().devices.filter(
-      (d) =>
-        d.id !== targetId &&
-        String(d.id) !== String(targetId) &&
-        (!normTargetName || d.name.trim().toLowerCase() !== normTargetName)
+      (d) => d.id !== deviceId && String(d.id) !== String(deviceId)
     );
     set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
 
-    // 3. حذفه نهائياً من قاعدة بيانات Supabase والتأكد من نجاح الحذف
-    if (identifier) {
-      await supabaseService.deleteDevice(targetId, targetName, identifier, client?.phone);
+    if (clientCode) {
+      await supabaseService.deleteDevice(deviceId, clientCode);
     }
   },
 
-  // ── بدء جلسة جديدة على جهاز (عداد حي مستمر عبر الخروج والتحديث) ──
+  // ── بدء جلسة جديدة على جهاز ──
   startSession: (deviceId, mode, timeType = 'open', targetMinutes = 60, customerName = '') => {
     let updatedSession = null;
+    const client = getClientSession();
+    const clientCode = client?.code;
+
     const updatedDevices = get().devices.map((d) => {
-      if (d.id === deviceId) {
+      if (d.id === deviceId || String(d.id) === String(deviceId)) {
         updatedSession = {
           startTime: Date.now(),
           mode,
@@ -299,21 +206,23 @@ const useDevicesStore = create((set, get) => ({
     });
 
     set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
 
-    if (updatedSession) {
+    if (updatedSession && clientCode) {
       supabaseService.updateDevice(deviceId, {
         status: 'busy',
         session: updatedSession,
-      });
+      }, clientCode);
     }
   },
 
   // ── تمديد وقت جلسة محددة ──
   extendSessionTime: (deviceId, extraMinutes) => {
     let updatedSession = null;
+    const client = getClientSession();
+    const clientCode = client?.code;
+
     const updatedDevices = get().devices.map((d) => {
-      if (d.id !== deviceId || !d.session) return d;
+      if ((d.id !== deviceId && String(d.id) !== String(deviceId)) || !d.session) return d;
       const currentTarget = d.session.targetMinutes || 0;
       updatedSession = {
         ...d.session,
@@ -327,10 +236,9 @@ const useDevicesStore = create((set, get) => ({
     });
 
     set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
 
-    if (updatedSession) {
-      supabaseService.updateDevice(deviceId, { session: updatedSession });
+    if (updatedSession && clientCode) {
+      supabaseService.updateDevice(deviceId, { session: updatedSession }, clientCode);
     }
   },
 
@@ -338,9 +246,11 @@ const useDevicesStore = create((set, get) => ({
   addOrder: (deviceId, product) => {
     let updatedSession = null;
     const nextId = get().nextOrderId;
+    const client = getClientSession();
+    const clientCode = client?.code;
 
     const updatedDevices = get().devices.map((d) => {
-      if (d.id !== deviceId || !d.session) return d;
+      if ((d.id !== deviceId && String(d.id) !== String(deviceId)) || !d.session) return d;
       const existing = d.session.orders.find((o) => o.name === product.name);
       updatedSession = {
         ...d.session,
@@ -363,18 +273,20 @@ const useDevicesStore = create((set, get) => ({
       nextOrderId: nextId + 1,
       devices: updatedDevices,
     });
-    saveDevicesCache(updatedDevices);
 
-    if (updatedSession) {
-      supabaseService.updateDevice(deviceId, { session: updatedSession });
+    if (updatedSession && clientCode) {
+      supabaseService.updateDevice(deviceId, { session: updatedSession }, clientCode);
     }
   },
 
   // ── حذف طلب من جهاز ──
   removeOrder: (deviceId, orderId) => {
     let updatedSession = null;
+    const client = getClientSession();
+    const clientCode = client?.code;
+
     const updatedDevices = get().devices.map((d) => {
-      if (d.id !== deviceId || !d.session) return d;
+      if ((d.id !== deviceId && String(d.id) !== String(deviceId)) || !d.session) return d;
       updatedSession = {
         ...d.session,
         orders: d.session.orders.filter((o) => o.id !== orderId),
@@ -386,17 +298,16 @@ const useDevicesStore = create((set, get) => ({
     });
 
     set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
 
-    if (updatedSession) {
-      supabaseService.updateDevice(deviceId, { session: updatedSession });
+    if (updatedSession && clientCode) {
+      supabaseService.updateDevice(deviceId, { session: updatedSession }, clientCode);
     }
   },
 
   // ── إنهاء الحساب وقفل الفاتورة ──
   endSession: async (deviceId) => {
     const client = getClientSession();
-    const identifier = client?.code || client?.phone;
+    const clientCode = client?.code;
     const device = get().devices.find(
       (d) => d.id === deviceId || String(d.id) === String(deviceId)
     );
@@ -404,97 +315,112 @@ const useDevicesStore = create((set, get) => ({
 
     const targetId = device.id;
     const endTime = Date.now();
-    const durationSeconds = Math.floor((endTime - device.session.startTime) / 1000);
+    const durationSeconds = Math.floor((endTime - Number(device.session.startTime)) / 1000);
     const hourlyRate =
       device.session.mode === 'single' ? device.singlePrice : device.multiPrice;
     const timeCost = parseFloat(((durationSeconds / 3600) * hourlyRate).toFixed(2));
-    const ordersCost = device.session.orders.reduce(
-      (sum, o) => sum + o.price * o.qty,
+    const ordersCost = (device.session.orders || []).reduce(
+      (sum, o) => sum + (parseFloat(o.price) || 0) * (Number(o.qty) || 1),
       0
     );
 
     const completed = {
       deviceName: device.name,
       deviceType: device.type,
-      isVIP: device.isVIP,
+      isVIP: Boolean(device.isVIP),
       customerName: device.session.customerName || '',
-      startTime: device.session.startTime,
+      startTime: Number(device.session.startTime),
       endTime,
       durationSeconds,
       mode: device.session.mode,
       timeType: device.session.timeType || 'open',
-      targetMinutes: device.session.targetMinutes,
+      targetMinutes: device.session.targetMinutes || null,
       timeCost,
       ordersCost: parseFloat(ordersCost.toFixed(2)),
       total: parseFloat((timeCost + ordersCost).toFixed(2)),
     };
 
-    // 1. تحديث الـ state والكاش المحلي فوراً ليكون الجهاز متاحاً
+    // 1. تحديث الجهاز في الـ state وفي السيرفر ليكون متاحاً فوراً
     const updatedDevices = get().devices.map((d) =>
       d.id === targetId || String(d.id) === String(targetId)
         ? { ...d, status: 'free', session: null }
         : d
     );
+    set({ devices: updatedDevices });
 
-    set((state) => ({
-      devices: updatedDevices,
-      completedSessions: [...state.completedSessions, { ...completed, id: state.nextSessionId }],
-      nextSessionId: state.nextSessionId + 1,
-    }));
-    saveDevicesCache(updatedDevices);
+    if (clientCode) {
+      await supabaseService.updateDevice(targetId, { status: 'free', session: null }, clientCode);
+    }
 
-    // 2. تحديث السيرفر في Supabase أولاً وقفل الجلسة تماماً
-    await supabaseService.updateDevice(targetId, { status: 'free', session: null });
-
-    // 3. حفظ الفاتورة في سجل الفواتير السحابي
-    if (identifier) {
+    // 2. حفظ الفاتورة في السيرفر أولاً للحصول على الـ ID الحقيقي لمنع عودتها بعد الحذف
+    let savedInvoice = null;
+    if (clientCode) {
       try {
-        const saved = await supabaseService.addCompletedSession(completed, identifier, client?.phone);
-        if (saved?.id) {
-          set((state) => ({
-            completedSessions: state.completedSessions.map((s) =>
-              s.startTime === completed.startTime ? { ...s, id: saved.id } : s
-            ),
-          }));
+        const saved = await supabaseService.addCompletedSession(completed, clientCode, client?.phone);
+        if (saved && saved.id) {
+          savedInvoice = {
+            ...completed,
+            id: saved.id,
+          };
         }
       } catch (err) {
-        console.error('Error saving completed session:', err);
+        console.error('Error saving invoice to Supabase:', err);
       }
     }
 
-    return completed;
+    // Fallback محلي فقط إذا لم يكن متصلاً
+    if (!savedInvoice) {
+      savedInvoice = { ...completed, id: Date.now() };
+    }
+
+    // 3. وضع الفاتورة في الـ state بالـ ID الحقيقي الصادر من قاعدة البيانات
+    set((state) => ({
+      completedSessions: [savedInvoice, ...state.completedSessions.filter((s) => s.id !== savedInvoice.id)],
+      nextSessionId: Math.max(state.nextSessionId, Number(savedInvoice.id) + 1),
+    }));
+
+    return savedInvoice;
   },
 
   // ── تعديل أسعار جهاز ──
   updateDevicePrice: (deviceId, priceType, value) => {
     const key = priceType === 'single' ? 'singlePrice' : 'multiPrice';
+    const dbKey = priceType === 'single' ? 'single_price' : 'multi_price';
     const numVal = parseFloat(value) || 0;
+    const client = getClientSession();
+    const clientCode = client?.code;
 
     const updatedDevices = get().devices.map((d) =>
-      d.id === deviceId ? { ...d, [key]: numVal } : d
+      d.id === deviceId || String(d.id) === String(deviceId) ? { ...d, [key]: numVal } : d
     );
     set({ devices: updatedDevices });
-    saveDevicesCache(updatedDevices);
 
-    supabaseService.updateDevice(deviceId, { [key]: numVal });
+    if (clientCode) {
+      supabaseService.updateDevice(deviceId, { [dbKey]: numVal }, clientCode);
+    }
   },
 
-  // ── حذف فاتورة فردية نهائياً من الحالة وقاعدة البيانات ──
+  // ── حذف فاتورة فردية نهائياً من الـ state وقاعدة البيانات ──
   deleteCompletedSession: async (sessionId) => {
-    // 1. مسحها محلياً فوراً
+    const client = getClientSession();
+    const clientCode = client?.code;
+
+    // 1. مسحها محلياً من الـ state فوراً
     const updated = get().completedSessions.filter(
       (s) => s.id !== sessionId && String(s.id) !== String(sessionId)
     );
     set({ completedSessions: updated });
 
-    // 2. مسحها نهائياً من Supabase
-    await supabaseService.deleteCompletedSession(sessionId);
+    // 2. مسحها نهائياً من Supabase بمعرف السجل وكود العميل
+    if (clientCode) {
+      await supabaseService.deleteCompletedSession(sessionId, clientCode);
+    }
   },
 
-  // ── تفريغ فواتير اليوم مع الحفاظ التام على سجل الشهر والتقارير ──
+  // ── مسح فواتير اليوم أو الجميع من قاعدة البيانات ──
   clearCompletedSessions: async (onlyToday = true) => {
     const client = getClientSession();
-    const identifier = client?.code || client?.phone;
+    const clientCode = client?.code;
 
     if (onlyToday) {
       const now = new Date();
@@ -504,13 +430,13 @@ const useDevicesStore = create((set, get) => ({
         (s) => Number(s.endTime || s.startTime) < startOfTodayMs
       );
       set({ completedSessions: remaining });
-      if (identifier) {
-        await supabaseService.clearCompletedSessions(identifier, client?.phone, true);
+      if (clientCode) {
+        await supabaseService.clearCompletedSessions(clientCode, true);
       }
     } else {
       set({ completedSessions: [], nextSessionId: 1 });
-      if (identifier) {
-        await supabaseService.clearCompletedSessions(identifier, client?.phone, false);
+      if (clientCode) {
+        await supabaseService.clearCompletedSessions(clientCode, false);
       }
     }
   },

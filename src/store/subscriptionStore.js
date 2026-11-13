@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { subscriptionService } from '../services/subscriptionService';
+import useDevicesStore from './devicesStore';
+import useAdminStore from './adminStore';
 
 // بيانات تسجيل دخول المطور السرية (يمكن تعيينها من .env أو تغييرها هنا)
 const DEV_PHONE = (import.meta.env.VITE_DEV_PHONE || '135635').trim();
@@ -64,6 +66,10 @@ const useSubscriptionStore = create((set, get) => ({
             });
           } catch (e) {}
         }
+        // تصفير الذاكرة الداخلية للمتاجر فوراً لضمان عدم تسريب أي بيانات
+        useDevicesStore.getState().resetStore();
+        useAdminStore.getState().resetStore();
+
         localStorage.setItem('playstation_client_session', JSON.stringify(result.client));
         set({
           currentClient: result.client,
@@ -85,6 +91,8 @@ const useSubscriptionStore = create((set, get) => ({
     try {
       localStorage.removeItem('playstation_client_session');
     } catch (e) {}
+    useDevicesStore.getState().resetStore();
+    useAdminStore.getState().resetStore();
     set({
       currentClient: null,
       isClientLoggedIn: false,
